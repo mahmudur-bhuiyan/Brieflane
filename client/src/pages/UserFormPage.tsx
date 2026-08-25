@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AppLayout } from '../components/AppLayout';
-import { IconArrowLeft } from '../components/icons';
+import { IconArrowLeft, IconUser } from '../components/icons';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input, Select } from '../components/ui/Input';
@@ -189,6 +189,7 @@ function UserForm({
             label="Name"
             type="text"
             placeholder="Jane Smith"
+            icon={<IconUser width={16} height={16} />}
             value={form.name}
             onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
           />

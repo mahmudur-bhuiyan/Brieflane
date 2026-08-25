@@ -104,7 +104,7 @@ function SidebarNav({
       </nav>
 
       <div className="border-t border-subtle p-4">
-        <div className="mb-3 flex items-center gap-3 rounded-xl bg-subtle p-3 ring-1 ring-[var(--border)]">
+        <div className="flex items-center gap-3 rounded-xl bg-subtle p-3 ring-1 ring-(--border)">
           <Avatar name={user?.name ?? null} email={user?.email ?? null} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-heading">
@@ -112,16 +112,16 @@ function SidebarNav({
             </p>
             <p className="truncate text-xs text-faint">{user?.email}</p>
           </div>
+          <button
+            type="button"
+            onClick={onLogout}
+            aria-label="Sign out"
+            title="Sign out"
+            className="shrink-0 rounded-lg p-2 text-muted transition hover:bg-(--hover-bg) hover:text-heading"
+          >
+            <IconLogOut width={18} height={18} />
+          </button>
         </div>
-        <ThemeToggle className="mb-2 w-full justify-start" showLabel />
-        <button
-          type="button"
-          onClick={onLogout}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted transition hover:bg-[var(--hover-bg)] hover:text-[var(--text-heading)]"
-        >
-          <IconLogOut />
-          Sign out
-        </button>
       </div>
     </>
   );
@@ -189,8 +189,8 @@ function UserMenuDropdown({
       </Button>
 
       {open && (
-        <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-[min(16rem,calc(100vw-2rem))] rounded-2xl border border-subtle bg-[var(--surface-raised)] p-2 shadow-2xl">
-          <div className="mb-2 flex items-center gap-3 rounded-xl bg-subtle p-3 ring-1 ring-[var(--border)]">
+        <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-[min(16rem,calc(100vw-2rem))] rounded-2xl border border-subtle bg-(--surface-raised) p-2 shadow-2xl">
+          <div className="mb-2 flex items-center gap-3 rounded-xl bg-subtle p-3 ring-1 ring-(--border)">
             <Avatar name={user.name} email={user.email} />
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-heading">
@@ -204,7 +204,7 @@ function UserMenuDropdown({
             <Link
               to="/profile"
               onClick={closeMenu}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted transition hover:bg-[var(--hover-bg)] hover:text-[var(--text-heading)]"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted transition hover:bg-(--hover-bg) hover:text-heading"
             >
               <IconUser width={18} height={18} />
               Profile
@@ -215,7 +215,7 @@ function UserMenuDropdown({
                 closeMenu();
                 onLogout();
               }}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted transition hover:bg-[var(--hover-bg)] hover:text-[var(--text-heading)]"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted transition hover:bg-(--hover-bg) hover:text-heading"
             >
               <IconLogOut width={18} height={18} />
               Logout
@@ -275,13 +275,13 @@ function TopBar({
 
         <div className="flex shrink-0 items-center gap-2">
           {user && (
-            <div className="hidden items-center gap-2 rounded-full bg-subtle px-3 py-1.5 text-xs text-muted ring-1 ring-[var(--border)] sm:flex">
+            <div className="hidden items-center gap-2 rounded-full bg-subtle px-3 py-1.5 text-xs text-muted ring-1 ring-(--border) sm:flex">
               <IconShield width={14} height={14} className="text-emerald-500" />
               <span className="max-w-[10rem] truncate">{formatRole(user.role)}</span>
             </div>
           )}
+          <ThemeToggle />
           {user && <UserMenuDropdown user={user} onLogout={onLogout} />}
-          <ThemeToggle className="xl:hidden" />
         </div>
       </div>
     </>

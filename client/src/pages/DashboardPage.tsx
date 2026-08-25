@@ -130,9 +130,9 @@ export function DashboardPage() {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {visibleLinks.map((link) => {
             const card = (
-              <Card className="transition hover:border-[var(--border-strong)]">
+              <Card className="transition hover:border-(--border-strong)">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-subtle text-muted ring-1 ring-[var(--border)]">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-subtle text-muted ring-1 ring-(--border)">
                     <link.icon width={18} height={18} />
                   </div>
                   <Badge variant={link.status === 'Available now' ? 'success' : 'neutral'}>

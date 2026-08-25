@@ -1,10 +1,11 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useMemo, useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '../components/AppLayout';
-import { IconFolder, IconPlus, IconRefresh } from '../components/icons';
+import { IconFolder, IconPlus, IconRefresh, IconUser } from '../components/icons';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { DataTable, type DataTableColumn } from '../components/ui/DataTable';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -14,7 +15,8 @@ import {
   useProjectsQuery,
   useSyncProjectsMutation,
 } from '../lib/queries/projects';
-import type { ActiveCollabCredentials, CreateProjectInput } from '../types/project';
+import { DEFAULT_PAGE_SIZE, type PageSize, type SortOrder } from '../types/pagination';
+import type { ActiveCollabCredentials, CreateProjectInput, ProjectRecord } from '../types/project';
 
 type CreateFormState = {
   acProjectId: string;
@@ -86,11 +88,13 @@ function CreateProjectModal({
         <Input
           label="Project name"
           required
+          icon={<IconFolder width={16} height={16} />}
           value={form.name}
           onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
         />
         <Input
           label="Client name"
+          icon={<IconUser width={16} height={16} />}
           value={form.clientName}
           onChange={(e) => setForm((prev) => ({ ...prev, clientName: e.target.value }))}
         />
@@ -117,6 +121,38 @@ function CreateProjectModal({
 function formatSyncedAt(value: string | null): string {
   if (!value) return 'Never synced';
   return new Date(value).toLocaleString();
+}
+
+function sortProjects(
+  projects: ProjectRecord[],
+  sortBy: string,
+  sortOrder: SortOrder,
+): ProjectRecord[] {
+  const sorted = [...projects];
+  const direction = sortOrder === 'asc' ? 1 : -1;
+
+  sorted.sort((a, b) => {
+    switch (sortBy) {
+      case 'name':
+        return direction * a.name.localeCompare(b.name);
+      case 'acProjectId':
+        return direction * (a.acProjectId - b.acProjectId);
+      case 'clientEmail': {
+        const aEmail = a.clientEmail ?? '';
+        const bEmail = b.clientEmail ?? '';
+        return direction * aEmail.localeCompare(bEmail);
+      }
+      case 'lastSyncedAt': {
+        const aTime = a.lastSyncedAt ? new Date(a.lastSyncedAt).getTime() : 0;
+        const bTime = b.lastSyncedAt ? new Date(b.lastSyncedAt).getTime() : 0;
+        return direction * (aTime - bTime);
+      }
+      default:
+        return 0;
+    }
+  });
+
+  return sorted;
 }
 
 function SyncActiveCollabModal({
@@ -168,6 +204,7 @@ function SyncActiveCollabModal({
           type="text"
           required
           autoComplete="username"
+          icon={<IconUser width={16} height={16} />}
           value={form.username}
           onChange={(e) => setForm((prev) => ({ ...prev, username: e.target.value }))}
         />
@@ -196,30 +233,114 @@ function SyncActiveCollabModal({
 }
 
 export function ProjectsPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSize>(DEFAULT_PAGE_SIZE);
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
-  const [syncError, setSyncError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showSync, setShowSync] = useState(false);
 
-  const { data, isPending, isError, error } = useProjectsQuery(debouncedSearch);
+  const { data, isPending, isError, error } = useProjectsQuery(search);
 
   const projects = data?.projects ?? [];
   const loadError = isError
     ? getApiErrorMessage(error, 'Failed to load projects')
     : null;
 
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 300);
-    return () => clearTimeout(timer);
-  }, [search]);
+  const sortedProjects = useMemo(
+    () => sortProjects(projects, sortBy, sortOrder),
+    [projects, sortBy, sortOrder],
+  );
+
+  const paginatedProjects = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return sortedProjects.slice(start, start + pageSize);
+  }, [sortedProjects, page, pageSize]);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1);
+  }, []);
+
+  const handlePageSizeChange = useCallback((nextPageSize: PageSize) => {
+    setPageSize(nextPageSize);
+    setPage(1);
+  }, []);
+
+  const handleSortChange = useCallback((nextSortBy: string, nextSortOrder: SortOrder) => {
+    setSortBy(nextSortBy);
+    setSortOrder(nextSortOrder);
+    setPage(1);
+  }, []);
 
   function handleOpenSync() {
     setSyncMessage(null);
-    setSyncError(null);
     setShowSync(true);
   }
+
+  const columns: DataTableColumn<ProjectRecord>[] = [
+    {
+      id: 'name',
+      header: 'Name',
+      width: 25,
+      align: 'left',
+      sortable: true,
+      cell: (project) => (
+        <>
+          <div className="font-medium text-heading">{project.name}</div>
+          {project.clientName && (
+            <p className="mt-0.5 text-xs text-faint">{project.clientName}</p>
+          )}
+        </>
+      ),
+    },
+    {
+      id: 'acProjectId',
+      header: 'AC ID',
+      width: 15,
+      sortable: true,
+      cell: (project) => <span className="text-muted">{project.acProjectId}</span>,
+    },
+    {
+      id: 'clientEmail',
+      header: 'Client email',
+      width: 25,
+      align: 'left',
+      sortable: true,
+      cell: (project) =>
+        project.clientEmail ? (
+          <span className="text-body">{project.clientEmail}</span>
+        ) : (
+          <Badge variant="warning">Missing</Badge>
+        ),
+    },
+    {
+      id: 'lastSyncedAt',
+      header: 'Last synced',
+      width: 20,
+      sortable: true,
+      cell: (project) => (
+        <span className="text-muted">{formatSyncedAt(project.lastSyncedAt)}</span>
+      ),
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      width: 15,
+      cell: (project) => (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => navigate(`/projects/${project.id}`)}
+        >
+          Edit
+        </Button>
+      ),
+    },
+  ];
 
   return (
     <AppLayout title="Projects" description="Sync from ActiveCollab and manage client details">
@@ -248,119 +369,77 @@ export function ProjectsPage() {
         <p className="mb-4 text-sm text-emerald-400">{syncMessage}</p>
       )}
 
-      {(loadError || syncError) && (
-        <p className="mb-4 text-sm text-red-400">{loadError ?? syncError}</p>
-      )}
-
-      <Card className="mb-6" padding={false}>
-        <div className="border-b border-subtle p-4">
-          <Input
-            label="Search by name"
-            placeholder="Filter projects…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-
-        {isPending && (
-          <p className="px-4 py-8 text-sm text-muted sm:px-6">Loading projects…</p>
-        )}
-
-        {!isPending && projects.length === 0 && (
-          <div className="flex flex-col items-center justify-center px-4 py-16 text-center sm:px-6">
-            <IconFolder className="mb-4 text-disabled" width={40} height={40} />
-            <p className="text-sm text-muted">
-              {search.trim()
-                ? 'No projects match your search.'
-                : 'No projects yet. Sync from ActiveCollab or add one manually.'}
-            </p>
-          </div>
-        )}
-
-        {!isPending && projects.length > 0 && (
-          <>
-            <div className="space-y-3 p-4 lg:hidden">
-              {projects.map((project) => (
-                <div
-                  key={project.id}
-                  className="rounded-xl border border-subtle bg-subtle p-4"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-medium text-heading">{project.name}</p>
-                      {project.clientName && (
-                        <p className="mt-0.5 text-xs text-faint">{project.clientName}</p>
-                      )}
-                      <p className="mt-2 text-xs text-muted">AC ID: {project.acProjectId}</p>
-                    </div>
-                    {project.clientEmail ? (
-                      <Badge variant="success">Ready</Badge>
-                    ) : (
-                      <Badge variant="warning">Missing email</Badge>
-                    )}
-                  </div>
-                  <p className="mt-3 truncate text-sm text-muted">
-                    {project.clientEmail || 'No client email'}
-                  </p>
-                  <p className="mt-1 text-xs text-faint">
-                    {formatSyncedAt(project.lastSyncedAt)}
-                  </p>
-                  <Link
-                    to={`/projects/${project.id}`}
-                    className="mt-4 flex w-full items-center justify-center rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-medium text-heading transition hover:bg-[var(--hover-bg)]"
-                  >
-                    Edit project
-                  </Link>
+      <Card padding={false}>
+        <DataTable
+          columns={columns}
+          data={paginatedProjects}
+          rowKey={(project) => project.id}
+          isLoading={isPending}
+          error={loadError}
+          search={search}
+          onSearchChange={handleSearchChange}
+          searchPlaceholder="Filter projects…"
+          page={page}
+          pageSize={pageSize}
+          total={sortedProjects.length}
+          onPageChange={setPage}
+          onPageSizeChange={handlePageSizeChange}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          onSortChange={handleSortChange}
+          emptyTitle={search.trim() ? 'No projects match your search' : 'No projects yet'}
+          emptyDescription={
+            search.trim()
+              ? 'Try a different project name.'
+              : 'Sync from ActiveCollab or add one manually.'
+          }
+          emptyAction={
+            !search.trim() ? (
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+                <Button variant="secondary" onClick={handleOpenSync}>
+                  <IconRefresh width={16} height={16} />
+                  Sync from AC
+                </Button>
+                <Button onClick={() => setShowCreate(true)}>
+                  <IconPlus width={16} height={16} />
+                  Add project
+                </Button>
+              </div>
+            ) : undefined
+          }
+          renderMobileRow={(project) => (
+            <div className="rounded-xl border border-subtle bg-subtle p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium text-heading">{project.name}</p>
+                  {project.clientName && (
+                    <p className="mt-0.5 text-xs text-faint">{project.clientName}</p>
+                  )}
+                  <p className="mt-2 text-xs text-muted">AC ID: {project.acProjectId}</p>
                 </div>
-              ))}
+                {project.clientEmail ? (
+                  <Badge variant="success">Ready</Badge>
+                ) : (
+                  <Badge variant="warning">Missing email</Badge>
+                )}
+              </div>
+              <p className="mt-3 truncate text-sm text-muted">
+                {project.clientEmail || 'No client email'}
+              </p>
+              <p className="mt-1 text-xs text-faint">
+                {formatSyncedAt(project.lastSyncedAt)}
+              </p>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="mt-4 w-full"
+                onClick={() => navigate(`/projects/${project.id}`)}
+              >
+                Edit project
+              </Button>
             </div>
-
-            <div className="table-scroll hidden lg:block">
-              <table className="min-w-[800px] w-full text-left text-sm">
-              <thead className="border-b border-subtle text-xs uppercase tracking-wider text-faint">
-                <tr>
-                  <th className="px-6 py-3">Name</th>
-                  <th className="px-6 py-3">AC ID</th>
-                  <th className="px-6 py-3">Client email</th>
-                  <th className="px-6 py-3">Last synced</th>
-                  <th className="px-6 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {projects.map((project) => (
-                  <tr key={project.id} className="border-b border-subtle last:border-0">
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-heading">{project.name}</div>
-                      {project.clientName && (
-                        <p className="mt-0.5 text-xs text-faint">{project.clientName}</p>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-muted">{project.acProjectId}</td>
-                    <td className="px-6 py-4">
-                      {project.clientEmail ? (
-                        <span className="text-body">{project.clientEmail}</span>
-                      ) : (
-                        <Badge variant="warning">Missing</Badge>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-muted">
-                      {formatSyncedAt(project.lastSyncedAt)}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <Link
-                        to={`/projects/${project.id}`}
-                        className="rounded-lg border border-[var(--input-border)] px-3 py-1.5 text-xs text-muted transition hover:bg-[var(--hover-bg)]"
-                      >
-                        Edit
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
-          </>
-        )}
+          )}
+        />
       </Card>
 
       {showCreate && (

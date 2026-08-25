@@ -36,9 +36,9 @@ function ProfileField({
   hint?: string;
 }) {
   return (
-    <div className="rounded-xl border border-[var(--border-strong)] bg-subtle p-4">
+    <div className="rounded-xl border border-(--border-strong) bg-subtle p-4">
       <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--border-strong)] bg-[var(--card-bg)] text-emerald-600 dark:text-emerald-500">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-(--border-strong) bg-(--card-bg) text-emerald-600 dark:text-emerald-500">
           {icon}
         </div>
         <div className="min-w-0">
@@ -129,6 +129,7 @@ function ProfileEditModal({ user, onClose }: { user: AuthUser; onClose: () => vo
       <form className="space-y-5" onSubmit={handleSubmit}>
         <Input
           label="Display name"
+          icon={<IconUser width={16} height={16} />}
           value={form.name}
           onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
           autoComplete="name"
@@ -136,13 +137,13 @@ function ProfileEditModal({ user, onClose }: { user: AuthUser; onClose: () => vo
           required
         />
 
-        <div className="rounded-xl bg-subtle px-4 py-3 ring-1 ring-[var(--border)]">
+        <div className="rounded-xl bg-subtle px-4 py-3 ring-1 ring-(--border)">
           <p className="text-xs font-medium uppercase tracking-wider text-faint">Email</p>
           <p className="mt-1 text-sm text-heading">{user.email}</p>
-          <p className="mt-1 text-xs text-muted">Contact an admin to change your email.</p>
+          <p className="mt-1 text-xs text-muted">Email cannot be changed.</p>
         </div>
 
-        <div className="rounded-xl bg-subtle p-4 ring-1 ring-[var(--border)]">
+        <div className="rounded-xl bg-subtle p-4 ring-1 ring-(--border)">
           <p className="text-sm font-medium text-heading">Change password</p>
           <p className="mt-1 text-xs text-muted">Leave blank to keep your current password.</p>
 
@@ -259,7 +260,7 @@ export function ProfilePage() {
           />
 
           <div className="ml-24 flex flex-wrap items-center gap-2 pt-11 sm:pt-3">
-            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--border-strong)] bg-subtle px-3 py-1.5 text-xs font-medium text-body">
+            <span className="inline-flex items-center gap-2 rounded-full border border-(--border-strong) bg-subtle px-3 py-1.5 text-xs font-medium text-body">
               <IconShield width={14} height={14} className="text-emerald-600 dark:text-emerald-500" />
               <span>{formatRole(user.role)}</span>
             </span>
@@ -276,7 +277,7 @@ export function ProfilePage() {
               icon={<IconMail width={16} height={16} />}
               label="Email address"
               value={user.email}
-              hint="Read-only"
+              hint="Cannot be changed"
             />
             <ProfileField
               icon={<IconShield width={16} height={16} />}

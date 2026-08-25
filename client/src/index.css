@@ -12,6 +12,7 @@
 /* Dark theme (default) */
 :root,
 [data-theme='dark'] {
+  color-scheme: dark;
   --surface: #0f1117;
   --surface-raised: #161922;
   --surface-overlay: #1c2030;
@@ -39,9 +40,13 @@
   --gradient-accent-2: rgba(59, 130, 246, 0.08);
   --gradient-login-1: rgba(16, 185, 129, 0.18);
   --gradient-login-2: rgba(99, 102, 241, 0.12);
+  --accent: #10b981;
   --nav-active-bg: rgba(16, 185, 129, 0.15);
   --nav-active-text: #6ee7b7;
   --nav-active-ring: rgba(16, 185, 129, 0.25);
+  --select-menu-bg: #161922;
+  --select-menu-border: rgba(255, 255, 255, 0.1);
+  --select-menu-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.55);
   --btn-secondary-text: #e2e8f0;
   --btn-ghost-text: #94a3b8;
   --btn-ghost-hover-text: #e2e8f0;
@@ -54,6 +59,7 @@
 
 /* Light theme */
 [data-theme='light'] {
+  color-scheme: light;
   --surface: #f1f5f9;
   --surface-raised: #ffffff;
   --surface-overlay: #e2e8f0;
@@ -81,9 +87,13 @@
   --gradient-accent-2: rgba(59, 130, 246, 0.08);
   --gradient-login-1: rgba(16, 185, 129, 0.14);
   --gradient-login-2: rgba(99, 102, 241, 0.1);
+  --accent: #059669;
   --nav-active-bg: rgba(16, 185, 129, 0.14);
   --nav-active-text: #047857;
   --nav-active-ring: rgba(16, 185, 129, 0.24);
+  --select-menu-bg: #ffffff;
+  --select-menu-border: rgba(15, 23, 42, 0.12);
+  --select-menu-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.16);
   --btn-secondary-text: #1e293b;
   --btn-ghost-text: #475569;
   --btn-ghost-hover-text: #0f172a;
@@ -209,10 +219,38 @@
     color: var(--text-faint);
   }
 
-  &:focus {
+  &:focus,
+  &:focus-visible {
     border-color: rgba(16, 185, 129, 0.5);
     box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
   }
+}
+
+@utility select-menu {
+  border-radius: 0.75rem;
+  border: 1px solid var(--select-menu-border);
+  background: var(--select-menu-bg);
+  box-shadow: var(--select-menu-shadow);
+}
+
+@utility select-option {
+  padding: 0.5rem 0.875rem;
+  text-align: left;
+  font-size: 0.875rem;
+  color: var(--text-body);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    background: var(--hover-bg);
+    color: var(--text-heading);
+  }
+}
+
+@utility select-option-active {
+  background: var(--nav-active-bg);
+  color: var(--nav-active-text);
 }
 
 @utility nav-link-active {

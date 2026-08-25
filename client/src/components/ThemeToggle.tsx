@@ -59,7 +59,7 @@ export function ThemeToggle({ className = '', showLabel = false }: ThemeTogglePr
       onClick={toggleTheme}
       aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
       title={isDark ? 'Light mode' : 'Dark mode'}
-      className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-muted transition hover:bg-[var(--hover-bg)] hover:text-[var(--text-heading)] ${className}`}
+      className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-muted transition hover:bg-(--hover-bg) hover:text-heading ${className}`}
     >
       {isDark ? <IconSun /> : <IconMoon />}
       {showLabel && <span>{isDark ? 'Light mode' : 'Dark mode'}</span>}
