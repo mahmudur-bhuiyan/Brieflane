@@ -1,12 +1,17 @@
 import type { Response } from 'express';
 import { Router } from 'express';
 import type { Prisma } from '@prisma/client';
+import { z } from 'zod';
 import { toProjectRecord } from '../lib/projects.js';
 import {
+  createActiveCollabService,
   isActiveCollabError,
-  requireActiveCollabService,
 } from '../lib/activecollab/client.js';
+import { activeCollabCredentialsSchema } from '../schemas/activecollab.js';
+import { isN8nError, requireN8nReportService } from '../lib/n8n/client.js';
+import { buildN8nWebhookPayload } from '../lib/reports.js';
 import { prisma } from '../lib/prisma.js';
+import { toReportRunRecord } from '../schemas/report.js';
 import {
   assignProjectToUser,
   projectListFilter,
@@ -14,6 +19,7 @@ import {
 } from '../lib/project-access.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { requireRoles } from '../middleware/requireRoles.js';
+import { reportTriggerRateLimiter } from '../middleware/rate-limit.js';
 import { createProjectSchema, updateProjectSchema } from '../schemas/project.js';
 
 export const projectsRouter = Router();
@@ -42,7 +48,7 @@ function handleActiveCollabError(error: unknown, res: Response) {
       res.status(503).json({ error: acError.message });
       return;
     case 'auth':
-      res.status(502).json({ error: 'ActiveCollab authentication failed. Check API token.' });
+      res.status(502).json({ error: 'ActiveCollab authentication failed. Check your credentials.' });
       return;
     case 'not_found':
       res.status(404).json({ error: acError.message });
@@ -77,9 +83,16 @@ projectsRouter.get('/', async (req, res) => {
   res.json({ projects: records, count: records.length });
 });
 
-projectsRouter.post('/sync', async (_req, res) => {
+projectsRouter.post('/sync', async (req, res) => {
+  const parsed = activeCollabCredentialsSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten().fieldErrors });
+    return;
+  }
+
   try {
-    const service = requireActiveCollabService();
+    const service = createActiveCollabService(parsed.data);
     const acProjects = await service.listProjects({ skipCache: true });
     const now = new Date();
 
@@ -122,9 +135,16 @@ projectsRouter.post('/sync', async (_req, res) => {
   }
 });
 
-projectsRouter.get('/ac-preview', async (req, res) => {
+projectsRouter.post('/ac-preview', async (req, res) => {
+  const parsed = activeCollabCredentialsSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten().fieldErrors });
+    return;
+  }
+
   try {
-    const service = requireActiveCollabService();
+    const service = createActiveCollabService(parsed.data);
     const skipCache = req.query.refresh === 'true';
     const projects = await service.listProjects({ skipCache });
 
@@ -138,7 +158,7 @@ projectsRouter.get('/ac-preview', async (req, res) => {
   }
 });
 
-projectsRouter.get('/ac-preview/:acProjectId', async (req, res) => {
+projectsRouter.post('/ac-preview/:acProjectId', async (req, res) => {
   const acProjectId = Number(req.params.acProjectId);
 
   if (!Number.isInteger(acProjectId) || acProjectId <= 0) {
@@ -146,8 +166,15 @@ projectsRouter.get('/ac-preview/:acProjectId', async (req, res) => {
     return;
   }
 
+  const parsed = activeCollabCredentialsSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten().fieldErrors });
+    return;
+  }
+
   try {
-    const service = requireActiveCollabService();
+    const service = createActiveCollabService(parsed.data);
     const project = await service.getProject(acProjectId);
 
     res.json({ project });
@@ -190,6 +217,105 @@ projectsRouter.post('/', async (req, res) => {
   }
 
   res.status(201).json({ project: toProjectRecord(project) });
+});
+
+projectsRouter.post('/:id/generate-report', reportTriggerRateLimiter, async (req, res) => {
+  const id = paramId(req.params.id);
+
+  if (!id) {
+    res.status(400).json({ error: 'Invalid project id' });
+    return;
+  }
+
+  const user = req.user!;
+  const project = await prisma.project.findUnique({ where: { id } });
+
+  if (!project || !(await userCanAccessProject(user, id))) {
+    res.status(404).json({ error: 'Project not found' });
+    return;
+  }
+
+  if (project.status !== 'ACTIVE') {
+    res.status(400).json({ error: 'Cannot generate reports for archived projects' });
+    return;
+  }
+
+  const clientEmail = project.clientEmail?.trim() ?? '';
+
+  if (!clientEmail) {
+    res.status(400).json({ error: 'Client email is required before generating a report' });
+    return;
+  }
+
+  if (!z.string().email().safeParse(clientEmail).success) {
+    res.status(400).json({ error: 'Client email must be a valid email address' });
+    return;
+  }
+
+  let n8nService;
+
+  try {
+    n8nService = requireN8nReportService();
+  } catch (error) {
+    if (isN8nError(error) && error.code === 'config') {
+      res.status(503).json({ error: error.message });
+      return;
+    }
+
+    throw error;
+  }
+
+  const reportRun = await prisma.reportRun.create({
+    data: {
+      projectId: id,
+      triggeredById: user.id,
+      status: 'pending',
+      payloadSnapshot: {},
+    },
+  });
+
+  const payload = buildN8nWebhookPayload(project, user, reportRun.id);
+
+  await prisma.reportRun.update({
+    where: { id: reportRun.id },
+    data: { payloadSnapshot: payload as Prisma.InputJsonValue },
+  });
+
+  try {
+    const result = await n8nService.triggerReport(payload);
+
+    const updated = await prisma.reportRun.update({
+      where: { id: reportRun.id },
+      data: {
+        status: 'running',
+        n8nExecutionId: result.n8nExecutionId,
+      },
+      include: { triggeredBy: { select: { email: true } } },
+    });
+
+    res.status(202).json({
+      reportRun: toReportRunRecord(updated, updated.triggeredBy.email),
+    });
+  } catch (error) {
+    const message = isN8nError(error) ? error.message : 'Failed to trigger report workflow';
+
+    const failed = await prisma.reportRun.update({
+      where: { id: reportRun.id },
+      data: {
+        status: 'failed',
+        errorMessage: message,
+        completedAt: new Date(),
+      },
+      include: { triggeredBy: { select: { email: true } } },
+    });
+
+    const status = isN8nError(error) && error.code === 'timeout' ? 504 : 502;
+
+    res.status(status).json({
+      error: message,
+      reportRun: toReportRunRecord(failed, failed.triggeredBy.email),
+    });
+  }
 });
 
 projectsRouter.get('/:id', async (req, res) => {

@@ -1,3 +1,4 @@
+import type { ActiveCollabCredentials } from '../../schemas/activecollab.js';
 import {
   ActiveCollabError,
   isActiveCollabError,
@@ -8,6 +9,8 @@ import {
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 const CACHE_TTL_MS = 7 * 60 * 1000;
+const CLIENT_NAME = 'Brieflane';
+const CLIENT_VENDOR = 'Brieflane';
 
 type CacheEntry<T> = {
   value: T;
@@ -16,12 +19,28 @@ type CacheEntry<T> = {
 
 type ActiveCollabConfig = {
   baseUrl: string;
-  apiToken: string;
+  credentials: ActiveCollabCredentials;
   timeoutMs?: number;
+};
+
+type IssueTokenResponse = {
+  is_ok?: boolean;
+  token?: string;
+  message?: string;
 };
 
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.replace(/\/+$/, '');
+}
+
+function getApiRoot(baseUrl: string): string {
+  const normalized = normalizeBaseUrl(baseUrl);
+
+  if (normalized.endsWith('/api/v1')) {
+    return normalized;
+  }
+
+  return `${normalized}/api/v1`;
 }
 
 function toAcProject(raw: AcProjectRaw): AcProject {
@@ -46,14 +65,15 @@ function readPagination(headers: Headers): AcPagination {
 }
 
 export class ActiveCollabService {
-  private readonly baseUrl: string;
-  private readonly apiToken: string;
+  private readonly apiRoot: string;
+  private readonly credentials: ActiveCollabCredentials;
   private readonly timeoutMs: number;
   private listProjectsCache: CacheEntry<AcProject[]> | null = null;
+  private apiToken: string | null = null;
 
   constructor(config: ActiveCollabConfig) {
-    this.baseUrl = normalizeBaseUrl(config.baseUrl);
-    this.apiToken = config.apiToken;
+    this.apiRoot = getApiRoot(config.baseUrl);
+    this.credentials = config.credentials;
     this.timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
@@ -73,7 +93,7 @@ export class ActiveCollabService {
   }
 
   async getProject(projectId: number): Promise<AcProject> {
-    const data = await this.request<AcProjectRaw>(`/api/v1/projects/${projectId}`);
+    const data = await this.request<AcProjectRaw>(`/projects/${projectId}`);
     return toAcProject(data);
   }
 
@@ -84,7 +104,7 @@ export class ActiveCollabService {
 
     while (true) {
       const { data, pagination } = await this.requestWithPagination<AcProjectRaw[]>(
-        `/api/v1/projects?page=${page}`,
+        `/projects?page=${page}`,
       );
 
       const batch = Array.isArray(data) ? data : [];
@@ -119,13 +139,70 @@ export class ActiveCollabService {
     return all;
   }
 
+  private async ensureApiToken(): Promise<string> {
+    if (this.apiToken) {
+      return this.apiToken;
+    }
+
+    const url = `${this.apiRoot}/issue-token`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: this.credentials.username,
+          password: this.credentials.password,
+          client_name: CLIENT_NAME,
+          client_vendor: CLIENT_VENDOR,
+        }),
+        signal: controller.signal,
+      });
+
+      const body = (await response.json().catch(() => ({}))) as IssueTokenResponse;
+
+      if (response.status === 401 || response.status === 403 || !body.is_ok || !body.token) {
+        throw new ActiveCollabError(
+          body.message ?? 'ActiveCollab authentication failed',
+          response.status,
+          'auth',
+        );
+      }
+
+      this.apiToken = body.token;
+      return this.apiToken;
+    } catch (error) {
+      if (error instanceof ActiveCollabError) {
+        throw error;
+      }
+
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new ActiveCollabError('ActiveCollab request timed out', undefined, 'timeout');
+      }
+
+      throw new ActiveCollabError(
+        error instanceof Error ? error.message : 'ActiveCollab authentication failed',
+        undefined,
+        'auth',
+      );
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
   private async request<T>(path: string): Promise<T> {
     const { data } = await this.requestWithPagination<T>(path);
     return data;
   }
 
   private async requestWithPagination<T>(path: string): Promise<{ data: T; pagination: AcPagination }> {
-    const url = `${this.baseUrl}${path.startsWith('/') ? path : `/${path}`}`;
+    const apiToken = await this.ensureApiToken();
+    const url = `${this.apiRoot}${path.startsWith('/') ? path : `/${path}`}`;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
@@ -134,12 +211,13 @@ export class ActiveCollabService {
         method: 'GET',
         headers: {
           Accept: 'application/json',
-          'X-Angie-AuthApiToken': this.apiToken,
+          'X-Angie-AuthApiToken': apiToken,
         },
         signal: controller.signal,
       });
 
       if (response.status === 401 || response.status === 403) {
+        this.apiToken = null;
         throw new ActiveCollabError('ActiveCollab authentication failed', response.status, 'auth');
       }
 
@@ -182,27 +260,16 @@ export class ActiveCollabService {
 
 export { ActiveCollabError, isActiveCollabError } from './types.js';
 
-export function getActiveCollabService(): ActiveCollabService | null {
+export function createActiveCollabService(credentials: ActiveCollabCredentials): ActiveCollabService {
   const baseUrl = process.env.ACTIVECOLLAB_BASE_URL?.trim();
-  const apiToken = process.env.ACTIVECOLLAB_API_TOKEN?.trim();
 
-  if (!baseUrl || !apiToken) {
-    return null;
-  }
-
-  return new ActiveCollabService({ baseUrl, apiToken });
-}
-
-export function requireActiveCollabService(): ActiveCollabService {
-  const service = getActiveCollabService();
-
-  if (!service) {
+  if (!baseUrl) {
     throw new ActiveCollabError(
-      'ActiveCollab is not configured. Set ACTIVECOLLAB_BASE_URL and ACTIVECOLLAB_API_TOKEN.',
+      'ActiveCollab is not configured. Set ACTIVECOLLAB_BASE_URL.',
       undefined,
       'config',
     );
   }
 
-  return service;
+  return new ActiveCollabService({ baseUrl, credentials });
 }

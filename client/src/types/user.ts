@@ -1,5 +1,7 @@
 import type { UserRole } from './auth';
 
+import type { PaginationMeta } from './pagination';
+
 export type UserStatus = 'ACTIVE' | 'INACTIVE';
 
 export type UserRecord = {
@@ -14,6 +16,20 @@ export type UserRecord = {
 
 export type UsersListResponse = {
   users: UserRecord[];
+  pagination: PaginationMeta;
+  stats: {
+    total: number;
+    active: number;
+    inactive: number;
+  };
+};
+
+export type UsersListParams = {
+  search?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 };
 
 export type UserResponse = {

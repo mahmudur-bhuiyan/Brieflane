@@ -3,10 +3,11 @@ import { changePasswordSchema, loginSchema, updateProfileSchema } from '../schem
 import { prisma } from '../lib/prisma.js';
 import { hashPassword, signToken, toAuthUser, verifyPassword } from '../lib/auth.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { loginRateLimiter } from '../middleware/rate-limit.js';
 
 export const authRouter = Router();
 
-authRouter.post('/login', async (req, res) => {
+authRouter.post('/login', loginRateLimiter, async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
 
   if (!parsed.success) {

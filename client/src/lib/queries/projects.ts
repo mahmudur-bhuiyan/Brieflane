@@ -1,12 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, apiFetch } from '../api';
 import type {
+  ActiveCollabCredentials,
   CreateProjectInput,
   ProjectResponse,
   ProjectsListResponse,
   SyncProjectsResponse,
   UpdateProjectInput,
 } from '../../types/project';
+import type { GenerateReportResponse } from '../../types/report';
 import { queryKeys } from './keys';
 
 function projectsPath(search: string): string {
@@ -80,10 +82,28 @@ export function useSyncProjectsMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () =>
-      apiFetch<SyncProjectsResponse>('/api/projects/sync', { method: 'POST' }),
+    mutationFn: (credentials: ActiveCollabCredentials) =>
+      apiFetch<SyncProjectsResponse>('/api/projects/sync', {
+        method: 'POST',
+        body: JSON.stringify(credentials),
+      }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+    },
+  });
+}
+
+export function useGenerateReportMutation(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      apiFetch<GenerateReportResponse>(`/api/projects/${projectId}/generate-report`, {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.reportRuns.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
     },
   });
 }

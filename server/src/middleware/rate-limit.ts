@@ -1,0 +1,19 @@
+import rateLimit from 'express-rate-limit';
+
+const jsonError = (message: string) => ({ error: message });
+
+export const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: jsonError('Too many login attempts. Please try again later.'),
+});
+
+export const reportTriggerRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: jsonError('Too many report requests. Please try again later.'),
+});

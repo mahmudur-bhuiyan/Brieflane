@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AppLayout } from '../components/AppLayout';
+import { ReportRunSummaryCards, ReportRunTable } from '../components/ReportRunTable';
 import { IconFileText, IconFolder, IconSparkles, IconUsers } from '../components/icons';
 import { Badge } from '../components/ui/Badge';
 import { Card } from '../components/ui/Card';
@@ -19,9 +20,9 @@ const quickLinks = [
   },
   {
     title: 'Reports',
-    description: 'Trigger n8n workflows and view run history.',
+    description: 'View report run history on the dashboard below.',
     icon: IconFileText,
-    status: 'Coming in Phase 3',
+    status: 'Available now',
   },
   {
     title: 'Users',
@@ -98,6 +99,28 @@ export function DashboardPage() {
             </div>
           </div>
         </Card>
+      )}
+
+      {dashboard?.reports && (
+        <div className="mb-8 space-y-6">
+          <div>
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-faint">
+              Report activity
+            </h2>
+            <ReportRunSummaryCards summary={dashboard.reports.summary} />
+          </div>
+
+          <Card>
+            <div className="mb-4 flex items-center gap-2">
+              <IconFileText width={18} height={18} className="text-muted" />
+              <h3 className="font-semibold text-heading">Recent report runs</h3>
+            </div>
+            <ReportRunTable
+              reportRuns={dashboard.reports.recent}
+              emptyMessage="No reports triggered yet. Generate one from a project detail page."
+            />
+          </Card>
+        </div>
       )}
 
       <div>

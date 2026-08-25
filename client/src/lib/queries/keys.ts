@@ -12,7 +12,15 @@ export const queryKeys = {
   },
   users: {
     all: ['users'] as const,
-    list: ['users', 'list'] as const,
+    list: (params: Record<string, string | number | undefined>) =>
+      ['users', 'list', params] as const,
+    detail: (id: string) => ['users', 'detail', id] as const,
     assignments: (userId: string) => ['users', 'assignments', userId] as const,
+  },
+  reportRuns: {
+    all: ['reportRuns'] as const,
+    project: (projectId: string) => ['reportRuns', 'project', projectId] as const,
+    list: (params: { projectId?: string; status?: string; limit?: number }) =>
+      ['reportRuns', 'list', params] as const,
   },
 };

@@ -7,6 +7,7 @@ import { ProjectsPage } from './pages/ProjectsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { UsersPage } from './pages/UsersPage';
+import { CreateUserPage, EditUserPage } from './pages/UserFormPage';
 
 function App() {
   return (
@@ -22,6 +23,8 @@ function App() {
 
       <Route element={<SuperAdminRoute />}>
         <Route path="/users" element={<UsersPage />} />
+        <Route path="/users/new" element={<CreateUserPage />} />
+        <Route path="/users/:id/edit" element={<EditUserPage />} />
       </Route>
 
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
