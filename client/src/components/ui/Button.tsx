@@ -13,10 +13,11 @@ const variantClasses: Record<ButtonVariant, string> = {
   primary:
     'bg-emerald-600 text-white shadow-lg shadow-emerald-900/30 hover:bg-emerald-500 focus-visible:ring-emerald-500/50',
   secondary:
-    'border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 focus-visible:ring-white/20',
-  ghost: 'text-slate-400 hover:bg-white/5 hover:text-slate-200 focus-visible:ring-white/20',
+    'border border-[var(--input-border)] bg-subtle text-[var(--btn-secondary-text)] hover:bg-[var(--hover-bg)] focus-visible:ring-emerald-500/20',
+  ghost:
+    'text-[var(--btn-ghost-text)] hover:bg-[var(--hover-bg)] hover:text-[var(--btn-ghost-hover-text)] focus-visible:ring-emerald-500/20',
   danger:
-    'border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20 focus-visible:ring-red-500/30',
+    'border border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500/20 focus-visible:ring-red-500/30 dark:text-red-300',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 import { APP_NAME } from '../constants';
 import { IconMail, IconShield } from '../components/icons';
+import { ThemeToggle } from '../components/ThemeToggle';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useAuth } from '../context/AuthContext';
@@ -33,39 +34,43 @@ export function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen bg-login">
+    <main className="relative flex min-h-screen bg-login">
+      <div className="absolute right-6 top-6 z-10">
+        <ThemeToggle showLabel />
+      </div>
+
       <div className="relative hidden flex-1 flex-col justify-between p-12 lg:flex">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-xl shadow-emerald-900/40">
             <span className="text-lg font-bold text-white">B</span>
           </div>
           <div>
-            <p className="text-lg font-semibold text-white">{APP_NAME}</p>
-            <p className="text-sm text-slate-400">Client report admin panel</p>
+            <p className="text-lg font-semibold text-heading">{APP_NAME}</p>
+            <p className="text-sm text-muted">Client report admin panel</p>
           </div>
         </div>
 
         <div className="max-w-md">
-          <h1 className="text-4xl font-semibold leading-tight tracking-tight text-white">
+          <h1 className="text-4xl font-semibold leading-tight tracking-tight text-heading">
             Select a project.
             <br />
-            <span className="bg-gradient-to-r from-emerald-300 to-teal-300 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
               Send the brief.
             </span>
           </h1>
-          <p className="mt-4 text-base leading-relaxed text-slate-400">
+          <p className="mt-4 text-base leading-relaxed text-muted">
             Manage ActiveCollab projects, enrich client data, and trigger report workflows — all
             from one secure admin panel.
           </p>
         </div>
 
-        <div className="flex items-center gap-6 text-sm text-slate-500">
+        <div className="flex items-center gap-6 text-sm text-faint">
           <div className="flex items-center gap-2">
-            <IconShield width={16} height={16} className="text-emerald-400" />
+            <IconShield width={16} height={16} className="text-emerald-500" />
             Role-based access
           </div>
           <div className="flex items-center gap-2">
-            <IconMail width={16} height={16} className="text-emerald-400" />
+            <IconMail width={16} height={16} className="text-emerald-500" />
             n8n report triggers
           </div>
         </div>
@@ -73,19 +78,19 @@ export function LoginPage() {
 
       <div className="flex flex-1 items-center justify-center px-6 py-12">
         <div className="w-full max-w-md">
-          <div className="mb-8 lg:hidden">
+          <div className="mb-8 flex items-center justify-between lg:hidden">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600">
                 <span className="font-bold text-white">B</span>
               </div>
-              <p className="text-lg font-semibold text-white">{APP_NAME}</p>
+              <p className="text-lg font-semibold text-heading">{APP_NAME}</p>
             </div>
           </div>
 
           <div className="glass-card rounded-2xl p-8">
-            <p className="text-sm font-medium text-emerald-400">Welcome back</p>
-            <h2 className="mt-1 text-2xl font-semibold text-white">Sign in to your account</h2>
-            <p className="mt-2 text-sm text-slate-400">Use your admin credentials to continue.</p>
+            <p className="text-sm font-medium text-emerald-500">Welcome back</p>
+            <h2 className="mt-1 text-2xl font-semibold text-heading">Sign in to your account</h2>
+            <p className="mt-2 text-sm text-muted">Use your admin credentials to continue.</p>
 
             <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
               <Input
@@ -110,7 +115,7 @@ export function LoginPage() {
               />
 
               {error && (
-                <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500 dark:text-red-300">
                   {error}
                 </div>
               )}
