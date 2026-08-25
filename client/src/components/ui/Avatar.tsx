@@ -19,7 +19,7 @@ export function Avatar({
 
   const sizeClasses =
     size === 'lg'
-      ? 'h-20 w-20 text-xl ring-4 ring-[var(--card-bg)]'
+      ? 'h-20 w-20 text-xl ring-4 ring-(--card-bg)'
       : 'h-9 w-9 text-xs ring-1 ring-white/10';
 
   return (

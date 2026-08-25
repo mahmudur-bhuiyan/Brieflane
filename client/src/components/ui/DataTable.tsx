@@ -4,7 +4,6 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconChevronUp,
-  IconSearch,
 } from '../icons';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import {
@@ -14,15 +13,46 @@ import {
   type SortOrder,
 } from '../../types/pagination';
 import { Button } from './Button';
+import { Input, SelectControl } from './Input';
+
+export type DataTableColumnAlign = 'left' | 'center' | 'right';
 
 export type DataTableColumn<T> = {
   id: string;
   header: string;
+  /** Column width as a percentage of the table (e.g. 25 = 25%). */
+  width?: number;
+  /** Horizontal alignment. Defaults to center. */
+  align?: DataTableColumnAlign;
   sortable?: boolean;
   headerClassName?: string;
   cellClassName?: string;
   cell: (row: T) => ReactNode;
 };
+
+function columnAlignClass(align: DataTableColumnAlign = 'center'): string {
+  switch (align) {
+    case 'left':
+      return 'text-left';
+    case 'right':
+      return 'text-right';
+    default:
+      return 'text-center';
+  }
+}
+
+function sortButtonClass(align: DataTableColumnAlign = 'center'): string {
+  const base = 'inline-flex items-center gap-1.5 transition hover:text-heading';
+
+  switch (align) {
+    case 'right':
+      return `${base} ml-auto`;
+    case 'center':
+      return `${base} mx-auto`;
+    default:
+      return base;
+  }
+}
 
 type DataTableProps<T> = {
   columns: DataTableColumn<T>[];
@@ -142,6 +172,7 @@ export function DataTable<T>({
   const showEmpty = !isLoading && !error && data.length === 0;
   const showPagination = total > pageSize;
   const pageItems = getPaginationItems(page, totalPages);
+  const hasColumnWidths = columns.some((column) => column.width != null);
 
   function handleSort(columnId: string) {
     if (sortBy === columnId) {
@@ -155,20 +186,14 @@ export function DataTable<T>({
   return (
     <div>
       <div className="border-b border-subtle px-4 py-4 sm:px-6">
-        <label className="relative block">
-          <IconSearch
-            width={16}
-            height={16}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint"
-          />
-          <input
-            type="search"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            placeholder={searchPlaceholder}
-            className="input-field w-full pl-10"
-          />
-        </label>
+        <Input
+          label="Search"
+          type="search"
+          hideLabel
+          value={searchInput}
+          onChange={(event) => setSearchInput(event.target.value)}
+          placeholder={searchPlaceholder}
+        />
       </div>
 
       {error && (
@@ -202,19 +227,31 @@ export function DataTable<T>({
           )}
 
           <div className={`table-scroll ${renderMobileRow ? 'hidden lg:block' : 'block'}`}>
-            <table className="min-w-[720px] w-full text-left text-sm">
+            <table
+              className={`min-w-[720px] w-full text-sm ${hasColumnWidths ? 'table-fixed' : ''}`}
+            >
+              {hasColumnWidths && (
+                <colgroup>
+                  {columns.map((column) => (
+                    <col
+                      key={column.id}
+                      style={column.width != null ? { width: `${column.width}%` } : undefined}
+                    />
+                  ))}
+                </colgroup>
+              )}
               <thead>
                 <tr className="border-b border-subtle text-xs uppercase tracking-wider text-faint">
                   {columns.map((column) => (
                     <th
                       key={column.id}
-                      className={`px-6 py-4 font-medium ${column.headerClassName ?? ''}`}
+                      className={`px-6 py-4 font-medium ${columnAlignClass(column.align)} ${column.headerClassName ?? ''}`}
                     >
                       {column.sortable ? (
                         <button
                           type="button"
                           onClick={() => handleSort(column.id)}
-                          className="inline-flex items-center gap-1.5 transition hover:text-heading"
+                          className={sortButtonClass(column.align)}
                         >
                           {column.header}
                           <SortIndicator
@@ -238,7 +275,7 @@ export function DataTable<T>({
                     {columns.map((column) => (
                       <td
                         key={column.id}
-                        className={`px-6 py-4 ${column.cellClassName ?? ''}`}
+                        className={`px-6 py-4 ${columnAlignClass(column.align)} ${column.cellClassName ?? ''}`}
                       >
                         {column.cell(row)}
                       </td>
@@ -255,17 +292,18 @@ export function DataTable<T>({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
           <label className="flex items-center gap-2 text-sm text-muted">
             <span>Rows per page</span>
-            <select
-              value={pageSize}
+            <SelectControl
+              value={String(pageSize)}
+              aria-label="Rows per page"
               onChange={(event) => onPageSizeChange(Number(event.target.value) as PageSize)}
-              className="input-field h-9 w-auto py-1"
+              className="h-9 w-auto py-1"
             >
               {PAGE_SIZE_OPTIONS.map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
               ))}
-            </select>
+            </SelectControl>
           </label>
 
           <p className="text-sm text-faint">
@@ -299,7 +337,7 @@ export function DataTable<T>({
                   className={`inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-sm font-medium transition ${
                     item === page
                       ? 'bg-emerald-600 text-white'
-                      : 'text-muted hover:bg-[var(--hover-bg)] hover:text-heading'
+                      : 'text-muted hover:bg-(--hover-bg) hover:text-heading'
                   }`}
                 >
                   {item}

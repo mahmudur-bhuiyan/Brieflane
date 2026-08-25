@@ -89,6 +89,8 @@ export function UsersPage() {
     {
       id: 'name',
       header: 'User',
+      width: 40,
+      align: 'left',
       sortable: true,
       cell: (user) => (
         <div className="flex items-center gap-3">
@@ -103,12 +105,14 @@ export function UsersPage() {
     {
       id: 'role',
       header: 'Role',
+      width: 20,
       sortable: true,
       cell: (user) => <Badge variant="neutral">{formatRole(user.role)}</Badge>,
     },
     {
       id: 'status',
       header: 'Status',
+      width: 20,
       sortable: true,
       cell: (user) => (
         <Badge variant={user.status === 'ACTIVE' ? 'success' : 'neutral'}>
@@ -119,10 +123,9 @@ export function UsersPage() {
     {
       id: 'actions',
       header: 'Actions',
-      headerClassName: 'text-right',
-      cellClassName: 'text-right',
+      width: 20,
       cell: (user) => (
-        <div className="flex flex-wrap justify-end gap-2">
+        <div className="flex flex-wrap justify-center gap-2">
           <Button
             variant="secondary"
             size="sm"

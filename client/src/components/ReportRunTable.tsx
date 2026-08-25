@@ -40,7 +40,7 @@ export function ReportRunTable({
     <div className="overflow-x-auto">
       <table className="w-full min-w-[32rem] text-left text-sm">
         <thead>
-          <tr className="border-b border-[var(--border)] text-xs uppercase tracking-wider text-faint">
+          <tr className="border-b border-subtle text-xs uppercase tracking-wider text-faint">
             {showProject && <th className="pb-3 pr-4 font-medium">Project</th>}
             <th className="pb-3 pr-4 font-medium">Status</th>
             <th className="pb-3 pr-4 font-medium">Triggered by</th>
@@ -48,7 +48,7 @@ export function ReportRunTable({
             <th className="pb-3 font-medium">Details</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-[var(--border)]">
+        <tbody className="divide-y divide-(--border)">
           {reportRuns.map((run) => (
             <tr key={run.id} className="align-top">
               {showProject && (
@@ -97,7 +97,7 @@ export function ReportRunSummaryCards({ summary }: { summary: ReportRunSummary }
       {items.map((item) => (
         <div
           key={item.label}
-          className="rounded-xl border border-[var(--border)] bg-subtle/50 px-4 py-3"
+          className="rounded-xl border border-subtle bg-subtle/50 px-4 py-3"
         >
           <p className="text-xs text-muted">{item.label}</p>
           <p className="mt-1 text-2xl font-semibold text-heading">{item.value}</p>

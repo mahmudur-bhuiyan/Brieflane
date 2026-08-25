@@ -2,11 +2,11 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AppLayout } from '../components/AppLayout';
 import { ReportRunTable } from '../components/ReportRunTable';
-import { IconArrowLeft, IconMail } from '../components/icons';
+import { IconArrowLeft, IconFileText, IconFolder, IconMail, IconUser } from '../components/icons';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card, CardHeader } from '../components/ui/Card';
-import { Input, Select } from '../components/ui/Input';
+import { Input, Select, Textarea } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { PageHeader } from '../components/ui/PageHeader';
 import { useAuth } from '../context/AuthContext';
@@ -285,11 +285,13 @@ export function ProjectDetailPage() {
           <Input
             label="Project name"
             required
+            icon={<IconFolder width={16} height={16} />}
             value={form.name}
             onChange={(e) => setForm((prev) => prev && { ...prev, name: e.target.value })}
           />
           <Input
             label="Client name"
+            icon={<IconUser width={16} height={16} />}
             value={form.clientName}
             onChange={(e) => setForm((prev) => prev && { ...prev, clientName: e.target.value })}
           />
@@ -301,23 +303,23 @@ export function ProjectDetailPage() {
           />
           <Input
             label="Report recipients (comma-separated)"
+            icon={<IconMail width={16} height={16} />}
             value={form.reportRecipients}
             onChange={(e) =>
               setForm((prev) => prev && { ...prev, reportRecipients: e.target.value })
             }
             placeholder="cc@company.com, billing@company.com"
           />
-          <label className="block">
-            <span className="text-sm font-medium text-muted">Custom metadata (JSON)</span>
-            <textarea
-              rows={5}
-              value={form.customMetadata}
-              onChange={(e) =>
-                setForm((prev) => prev && { ...prev, customMetadata: e.target.value })
-              }
-              className="input-field font-mono"
-            />
-          </label>
+          <Textarea
+            label="Custom metadata (JSON)"
+            rows={5}
+            icon={<IconFileText width={16} height={16} />}
+            value={form.customMetadata}
+            onChange={(e) =>
+              setForm((prev) => prev && { ...prev, customMetadata: e.target.value })
+            }
+            className="font-mono"
+          />
 
           {isSuperAdmin(user?.role) && (
             <Select

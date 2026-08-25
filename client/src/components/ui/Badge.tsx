@@ -4,7 +4,7 @@ type BadgeVariant = 'success' | 'neutral' | 'warning' | 'accent';
 
 const variantClasses: Record<BadgeVariant, string> = {
   success: 'bg-emerald-500/15 text-emerald-600 ring-emerald-500/25 dark:text-emerald-300',
-  neutral: 'bg-[var(--badge-neutral-bg)] text-[var(--badge-neutral-text)] ring-[var(--badge-neutral-ring)]',
+  neutral: 'bg-(--badge-neutral-bg) text-(--badge-neutral-text) ring-(--badge-neutral-ring)',
   warning: 'bg-amber-500/15 text-amber-600 ring-amber-500/25 dark:text-amber-300',
   accent: 'bg-indigo-500/15 text-indigo-600 ring-indigo-500/25 dark:text-indigo-300',
 };
