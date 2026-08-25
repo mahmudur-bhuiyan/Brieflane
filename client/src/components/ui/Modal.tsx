@@ -18,7 +18,7 @@ export function Modal({
       <button
         type="button"
         aria-label="Close dialog"
-        className="overlay-backdrop absolute inset-0 backdrop-blur-sm"
+        className="overlay-backdrop absolute inset-0"
         onClick={onClose}
       />
       <div className="glass-card relative max-h-[min(92dvh,100dvh)] w-full max-w-md overflow-y-auto rounded-t-2xl p-5 shadow-2xl sm:rounded-2xl sm:p-6">
