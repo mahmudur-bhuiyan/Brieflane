@@ -7,8 +7,10 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { AuthUser, LoginInput, LoginResponse, MeResponse } from '../types/auth';
 import { apiFetch, clearToken, getToken, setToken } from '../lib/api';
+import { queryKeys } from '../lib/queries/keys';
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -20,42 +22,39 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const [token, setTokenState] = useState<string | null>(() => getToken());
 
-  const loadUser = useCallback(async () => {
-    const token = getToken();
-
-    if (!token) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const data = await apiFetch<MeResponse>('/api/auth/me');
-      setUser(data.user);
-    } catch {
-      clearToken();
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data, isPending, isError } = useQuery({
+    queryKey: queryKeys.auth.me,
+    queryFn: () => apiFetch<MeResponse>('/api/auth/me'),
+    enabled: Boolean(token),
+    retry: false,
+  });
 
   useEffect(() => {
-    void loadUser();
-  }, [loadUser]);
+    if (isError) {
+      clearToken();
+      setTokenState(null);
+    }
+  }, [isError]);
 
-  const login = useCallback(async (input: LoginInput) => {
-    const data = await apiFetch<LoginResponse>('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(input),
-    });
+  const user = token && !isError ? (data?.user ?? null) : null;
+  const loading = Boolean(token) && isPending;
 
-    setToken(data.token);
-    setUser(data.user);
-  }, []);
+  const login = useCallback(
+    async (input: LoginInput) => {
+      const response = await apiFetch<LoginResponse>('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      });
+
+      setToken(response.token);
+      setTokenState(response.token);
+      queryClient.setQueryData<MeResponse>(queryKeys.auth.me, { user: response.user });
+    },
+    [queryClient],
+  );
 
   const logout = useCallback(async () => {
     try {
@@ -65,8 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     clearToken();
-    setUser(null);
-  }, []);
+    setTokenState(null);
+    queryClient.removeQueries({ queryKey: queryKeys.auth.me });
+  }, [queryClient]);
 
   const value = useMemo(
     () => ({ user, loading, login, logout }),

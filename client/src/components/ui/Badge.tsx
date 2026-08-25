@@ -3,10 +3,10 @@ import type { ReactNode } from 'react';
 type BadgeVariant = 'success' | 'neutral' | 'warning' | 'accent';
 
 const variantClasses: Record<BadgeVariant, string> = {
-  success: 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/25',
-  neutral: 'bg-white/5 text-slate-400 ring-white/10',
-  warning: 'bg-amber-500/15 text-amber-300 ring-amber-500/25',
-  accent: 'bg-indigo-500/15 text-indigo-300 ring-indigo-500/25',
+  success: 'bg-emerald-500/15 text-emerald-600 ring-emerald-500/25 dark:text-emerald-300',
+  neutral: 'bg-[var(--badge-neutral-bg)] text-[var(--badge-neutral-text)] ring-[var(--badge-neutral-ring)]',
+  warning: 'bg-amber-500/15 text-amber-600 ring-amber-500/25 dark:text-amber-300',
+  accent: 'bg-indigo-500/15 text-indigo-600 ring-indigo-500/25 dark:text-indigo-300',
 };
 
 export function Badge({

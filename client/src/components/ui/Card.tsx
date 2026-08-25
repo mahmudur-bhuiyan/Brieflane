@@ -11,7 +11,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`glass-card rounded-2xl ${padding ? 'p-6' : ''} ${className}`}
+      className={`glass-card rounded-2xl ${padding ? 'p-4 sm:p-5 lg:p-6' : ''} ${className}`}
     >
       {children}
     </div>
@@ -28,10 +28,10 @@ export function CardHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="mb-6 flex items-start justify-between gap-4">
-      <div>
-        <h2 className="text-lg font-semibold text-white">{title}</h2>
-        {description && <p className="mt-1 text-sm text-slate-400">{description}</p>}
+    <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0">
+        <h2 className="text-lg font-semibold text-heading">{title}</h2>
+        {description && <p className="mt-1 text-sm text-muted">{description}</p>}
       </div>
       {action}
     </div>

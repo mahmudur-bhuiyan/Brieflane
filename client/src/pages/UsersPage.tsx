@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { AppLayout } from '../components/AppLayout';
 import { IconPlus } from '../components/icons';
 import { Avatar } from '../components/ui/Avatar';
@@ -8,15 +8,22 @@ import { Card } from '../components/ui/Card';
 import { Input, Select } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { PageHeader } from '../components/ui/PageHeader';
-import { ApiError, apiFetch } from '../lib/api';
+import { useProjectsQuery } from '../lib/queries/projects';
+import {
+  getApiErrorMessage,
+  useCreateUserMutation,
+  useDeactivateUserMutation,
+  useSetUserAssignmentsMutation,
+  useUpdateUserMutation,
+  useUserAssignmentsQuery,
+  useUsersQuery,
+} from '../lib/queries/users';
 import { formatRole } from '../lib/roles';
 import type { UserRole } from '../types/auth';
 import type {
   CreateUserInput,
   UpdateUserInput,
   UserRecord,
-  UsersListResponse,
-  UserResponse,
 } from '../types/user';
 
 type UserFormMode = 'create' | 'edit';
@@ -41,13 +48,17 @@ function UserFormModal({
   mode,
   user,
   onClose,
-  onSaved,
 }: {
   mode: UserFormMode;
   user: UserRecord | null;
   onClose: () => void;
-  onSaved: () => void;
 }) {
+  const createUser = useCreateUserMutation();
+  const updateUser = useUpdateUserMutation();
+  const setAssignments = useSetUserAssignmentsMutation(user?.id ?? '');
+  const { data: projectsData } = useProjectsQuery('');
+  const showAssignments = mode === 'edit' && user?.role === 'PROJECT_MANAGER';
+  const { data: assignmentsData } = useUserAssignmentsQuery(user?.id, showAssignments);
   const [form, setForm] = useState<UserFormState>(() =>
     user
       ? {
@@ -59,13 +70,29 @@ function UserFormModal({
         }
       : emptyForm,
   );
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (assignmentsData) {
+      setSelectedProjectIds(assignmentsData.assignments.map((row) => row.projectId));
+    }
+  }, [assignmentsData]);
+
+  const submitting = createUser.isPending || updateUser.isPending || setAssignments.isPending;
+  const projects = projectsData?.projects ?? [];
+
+  function toggleProject(projectId: string) {
+    setSelectedProjectIds((current) =>
+      current.includes(projectId)
+        ? current.filter((id) => id !== projectId)
+        : [...current, projectId],
+    );
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setSubmitting(true);
 
     try {
       if (mode === 'create') {
@@ -76,30 +103,24 @@ function UserFormModal({
           ...(form.name.trim() && { name: form.name.trim() }),
         };
 
-        await apiFetch<UserResponse>('/api/users', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        });
+        await createUser.mutateAsync(payload);
       } else if (user) {
         const payload: UpdateUserInput = {
           name: form.name.trim() || null,
-          role: form.role,
           status: form.status,
           ...(form.password && { password: form.password }),
         };
 
-        await apiFetch<UserResponse>(`/api/users/${user.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify(payload),
-        });
+        await updateUser.mutateAsync({ id: user.id, payload });
+
+        if (user.role === 'PROJECT_MANAGER') {
+          await setAssignments.mutateAsync({ projectIds: selectedProjectIds });
+        }
       }
 
-      onSaved();
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to save user');
-    } finally {
-      setSubmitting(false);
+      setError(getApiErrorMessage(err, 'Failed to save user'));
     }
   }
 
@@ -108,8 +129,8 @@ function UserFormModal({
       title={mode === 'create' ? 'Add user' : 'Edit user'}
       description={
         mode === 'create'
-          ? 'Create a Project Manager or Super Admin account.'
-          : 'Update role, status, or password.'
+          ? 'Create a Project Manager account.'
+          : 'Update status or password.'
       }
       onClose={onClose}
     >
@@ -132,17 +153,6 @@ function UserFormModal({
           value={form.name}
           onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
         />
-
-        <Select
-          label="Role"
-          value={form.role}
-          onChange={(event) =>
-            setForm((prev) => ({ ...prev, role: event.target.value as UserRole }))
-          }
-        >
-          <option value="PROJECT_MANAGER">Project Manager</option>
-          <option value="SUPER_ADMIN">Super Admin</option>
-        </Select>
 
         {mode === 'edit' && (
           <Select
@@ -170,17 +180,49 @@ function UserFormModal({
           onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
         />
 
+        {showAssignments && (
+          <div>
+            <p className="text-sm font-medium text-slate-300">Assigned projects</p>
+            <p className="mt-1 text-xs text-faint">
+              Project Managers only see projects assigned here.
+            </p>
+            <div className="mt-3 max-h-48 space-y-2 overflow-y-auto rounded-xl border border-subtle bg-subtle p-3">
+              {projects.length === 0 ? (
+                <p className="text-sm text-faint">No projects in Brieflane yet. Sync from ActiveCollab first.</p>
+              ) : (
+                projects.map((project) => (
+                  <label
+                    key={project.id}
+                    className="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-1.5 hover:bg-white/5"
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={selectedProjectIds.includes(project.id)}
+                      onChange={() => toggleProject(project.id)}
+                    />
+                    <span>
+                      <span className="block text-sm text-heading">{project.name}</span>
+                      <span className="text-xs text-faint">AC #{project.acProjectId}</span>
+                    </span>
+                  </label>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
         {error && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500 dark:text-red-300">
             {error}
           </div>
         )}
 
-        <div className="flex justify-end gap-3 pt-2">
-          <Button variant="secondary" type="button" onClick={onClose}>
+        <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+          <Button variant="secondary" type="button" onClick={onClose} className="w-full sm:w-auto">
             Cancel
           </Button>
-          <Button type="submit" disabled={submitting}>
+          <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
             {submitting ? 'Saving…' : 'Save user'}
           </Button>
         </div>
@@ -190,29 +232,16 @@ function UserFormModal({
 }
 
 export function UsersPage() {
-  const [users, setUsers] = useState<UserRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isPending, isError, error: loadError } = useUsersQuery();
+  const deactivateUser = useDeactivateUserMutation();
   const [formMode, setFormMode] = useState<UserFormMode | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  const loadUsers = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const data = await apiFetch<UsersListResponse>('/api/users');
-      setUsers(data.users);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to load users');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadUsers();
-  }, [loadUsers]);
+  const users = data?.users ?? [];
+  const error = isError
+    ? getApiErrorMessage(loadError, 'Failed to load users')
+    : actionError;
 
   function openCreate() {
     setSelectedUser(null);
@@ -229,16 +258,17 @@ export function UsersPage() {
     setSelectedUser(null);
   }
 
-  async function deactivateUser(user: UserRecord) {
+  async function handleDeactivate(user: UserRecord) {
     if (!confirm(`Deactivate ${user.email}? They will not be able to sign in.`)) {
       return;
     }
 
+    setActionError(null);
+
     try {
-      await apiFetch(`/api/users/${user.id}`, { method: 'DELETE' });
-      await loadUsers();
+      await deactivateUser.mutateAsync(user.id);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to deactivate user');
+      setActionError(getApiErrorMessage(err, 'Failed to deactivate user'));
     }
   }
 
@@ -248,45 +278,45 @@ export function UsersPage() {
     <AppLayout title="Users" description="Manage team access and roles.">
       <PageHeader
         title="Team members"
-        description="Invite Project Managers and Super Admins. Deactivated users cannot sign in."
+        description="Invite Project Managers. Deactivated users cannot sign in."
         action={
-          <Button onClick={openCreate}>
+          <Button onClick={openCreate} className="w-full md:w-auto">
             <IconPlus width={16} height={16} />
             Add user
           </Button>
         }
       />
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
-          <p className="text-sm text-slate-400">Total users</p>
-          <p className="mt-1 text-2xl font-semibold text-white">{users.length}</p>
+          <p className="text-sm text-muted">Total users</p>
+          <p className="mt-1 text-2xl font-semibold text-heading">{users.length}</p>
         </Card>
         <Card>
-          <p className="text-sm text-slate-400">Active</p>
-          <p className="mt-1 text-2xl font-semibold text-emerald-300">{activeCount}</p>
+          <p className="text-sm text-muted">Active</p>
+          <p className="mt-1 text-2xl font-semibold text-emerald-500 dark:text-emerald-300">{activeCount}</p>
         </Card>
         <Card>
-          <p className="text-sm text-slate-400">Inactive</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-400">{users.length - activeCount}</p>
+          <p className="text-sm text-muted">Inactive</p>
+          <p className="mt-1 text-2xl font-semibold text-faint">{users.length - activeCount}</p>
         </Card>
       </div>
 
       <Card padding={false}>
-        {loading && (
+        {isPending && (
           <div className="flex items-center justify-center px-6 py-16">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-emerald-400" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 spinner-track" />
           </div>
         )}
 
         {error && (
-          <div className="border-b border-white/5 px-6 py-4 text-sm text-red-300">{error}</div>
+          <div className="border-b border-subtle px-6 py-4 text-sm text-red-500 dark:text-red-300">{error}</div>
         )}
 
-        {!loading && users.length === 0 && (
+        {!isPending && users.length === 0 && (
           <div className="px-6 py-16 text-center">
-            <p className="text-sm font-medium text-slate-300">No users yet</p>
-            <p className="mt-1 text-sm text-slate-500">Add your first Project Manager to get started.</p>
+            <p className="text-sm font-medium text-heading">No users yet</p>
+            <p className="mt-1 text-sm text-faint">Add your first Project Manager to get started.</p>
             <Button className="mt-6" onClick={openCreate}>
               <IconPlus width={16} height={16} />
               Add user
@@ -294,11 +324,56 @@ export function UsersPage() {
           </div>
         )}
 
-        {!loading && users.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+        {!isPending && users.length > 0 && (
+          <>
+            <div className="space-y-3 p-4 lg:hidden">
+              {users.map((user) => (
+                <div
+                  key={user.id}
+                  className="rounded-xl border border-subtle bg-subtle p-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <Avatar name={user.name} email={user.email} />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-heading">{user.name || 'Unnamed user'}</p>
+                      <p className="truncate text-xs text-faint">{user.email}</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Badge variant="neutral">{formatRole(user.role)}</Badge>
+                        <Badge variant={user.status === 'ACTIVE' ? 'success' : 'neutral'}>
+                          {user.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => openEdit(user)}
+                    >
+                      Edit
+                    </Button>
+                    {user.status === 'ACTIVE' && (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleDeactivate(user)}
+                        disabled={deactivateUser.isPending}
+                      >
+                        Deactivate
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="table-scroll hidden lg:block">
+              <table className="min-w-[720px] w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-white/5 text-xs uppercase tracking-wider text-slate-500">
+                <tr className="border-b border-subtle text-xs uppercase tracking-wider text-faint">
                   <th className="px-6 py-4 font-medium">User</th>
                   <th className="px-6 py-4 font-medium">Role</th>
                   <th className="px-6 py-4 font-medium">Status</th>
@@ -309,21 +384,19 @@ export function UsersPage() {
                 {users.map((user) => (
                   <tr
                     key={user.id}
-                    className="border-b border-white/5 transition hover:bg-white/[0.02]"
+                    className="border-b border-subtle table-row-hover transition"
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <Avatar name={user.name} email={user.email} />
                         <div>
-                          <p className="font-medium text-white">{user.name || 'Unnamed user'}</p>
-                          <p className="text-xs text-slate-500">{user.email}</p>
+                          <p className="font-medium text-heading">{user.name || 'Unnamed user'}</p>
+                          <p className="text-xs text-faint">{user.email}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <Badge variant={user.role === 'SUPER_ADMIN' ? 'accent' : 'neutral'}>
-                        {formatRole(user.role)}
-                      </Badge>
+                      <Badge variant="neutral">{formatRole(user.role)}</Badge>
                     </td>
                     <td className="px-6 py-4">
                       <Badge variant={user.status === 'ACTIVE' ? 'success' : 'neutral'}>
@@ -331,12 +404,17 @@ export function UsersPage() {
                       </Badge>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex flex-wrap justify-end gap-2">
                         <Button variant="secondary" size="sm" onClick={() => openEdit(user)}>
                           Edit
                         </Button>
                         {user.status === 'ACTIVE' && (
-                          <Button variant="danger" size="sm" onClick={() => deactivateUser(user)}>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => handleDeactivate(user)}
+                            disabled={deactivateUser.isPending}
+                          >
                             Deactivate
                           </Button>
                         )}
@@ -346,7 +424,8 @@ export function UsersPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
+          </>
         )}
       </Card>
 
@@ -355,7 +434,6 @@ export function UsersPage() {
           mode={formMode}
           user={selectedUser}
           onClose={closeForm}
-          onSaved={loadUsers}
         />
       )}
     </AppLayout>

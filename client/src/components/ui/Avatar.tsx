@@ -1,5 +1,15 @@
-export function Avatar({ name, email }: { name: string | null; email: string }) {
-  const label = (name?.trim() || email).trim();
+export function Avatar({
+  name,
+  email,
+  size = 'sm',
+  className = '',
+}: {
+  name: string | null;
+  email: string | null;
+  size?: 'sm' | 'lg';
+  className?: string;
+}) {
+  const label = name?.trim() || email?.trim() || '';
   const initials = label
     .split(/[\s@.]+/)
     .filter(Boolean)
@@ -7,9 +17,16 @@ export function Avatar({ name, email }: { name: string | null; email: string }) 
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('');
 
+  const sizeClasses =
+    size === 'lg'
+      ? 'h-20 w-20 text-xl ring-4 ring-[var(--card-bg)]'
+      : 'h-9 w-9 text-xs ring-1 ring-white/10';
+
   return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500/30 to-indigo-500/30 text-xs font-semibold text-white ring-1 ring-white/10">
-      {initials || '?'}
+    <div
+      className={`grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-emerald-500/30 to-indigo-500/30 font-semibold text-white ${sizeClasses} ${className}`}
+    >
+      <span className="block leading-none">{initials || '?'}</span>
     </div>
   );
 }
