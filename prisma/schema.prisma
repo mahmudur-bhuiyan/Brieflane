@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Prisma schema — see docs/PROJECT_PLAN.md §4 for field notes.
+
+enum UserRole {
+  SUPER_ADMIN
+  PROJECT_MANAGER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ReportRunStatus {
+  pending
+  running
+  completed
+  failed
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  name         String?
+  role         UserRole
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  reportRuns ReportRun[]
+
+  @@map("users")
+}
+
+model Project {
+  id               String        @id @default(cuid())
+  acProjectId      Int           @unique @map("ac_project_id")
+  name             String
+  clientName       String?       @map("client_name")
+  clientEmail      String?       @map("client_email")
+  reportRecipients Json          @default("[]") @map("report_recipients")
+  customMetadata   Json          @default("{}") @map("custom_metadata")
+  status           ProjectStatus @default(ACTIVE)
+  lastSyncedAt     DateTime?     @map("last_synced_at")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  reportRuns ReportRun[]
+
+  @@map("projects")
+}
+
+model ReportRun {
+  id              String          @id @default(cuid())
+  projectId       String          @map("project_id")
+  triggeredById   String          @map("triggered_by_id")
+  status          ReportRunStatus @default(pending)
+  n8nExecutionId  String?         @map("n8n_execution_id")
+  errorMessage    String?         @map("error_message") @db.Text
+  payloadSnapshot Json            @map("payload_snapshot")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  completedAt     DateTime?       @map("completed_at")
+
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  triggeredBy User    @relation(fields: [triggeredById], references: [id])
+
+  @@index([projectId])
+  @@index([triggeredById])
+  @@map("report_runs")
+}
