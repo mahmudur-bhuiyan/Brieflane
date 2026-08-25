@@ -7,7 +7,7 @@ export function ProtectedRoute() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-app text-muted">
+      <main className="flex min-h-[100dvh] w-full flex-col items-center justify-center gap-4 bg-app px-4 text-muted">
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-lg font-bold text-white shadow-lg shadow-emerald-900/40">
           B
         </div>

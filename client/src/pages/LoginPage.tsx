@@ -34,12 +34,14 @@ export function LoginPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen bg-login">
-      <div className="absolute right-6 top-6 z-10">
-        <ThemeToggle showLabel />
+    <main className="relative min-h-[100dvh] w-full min-w-0 bg-login">
+      <div className="absolute right-4 top-4 z-10 sm:right-6 sm:top-6">
+        <ThemeToggle showLabel className="hidden sm:flex" />
+        <ThemeToggle className="sm:hidden" />
       </div>
 
-      <div className="relative hidden flex-1 flex-col justify-between p-12 lg:flex">
+      <div className="mx-auto grid min-h-[100dvh] w-full max-w-6xl grid-cols-1 md:grid-cols-2 md:items-center md:gap-x-10 lg:gap-x-14 md:px-8 lg:px-10">
+        <div className="relative hidden flex-col justify-between py-8 md:flex md:min-h-[100dvh] md:py-10 lg:py-12">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-xl shadow-emerald-900/40">
             <span className="text-lg font-bold text-white">B</span>
@@ -50,8 +52,8 @@ export function LoginPage() {
           </div>
         </div>
 
-        <div className="max-w-md">
-          <h1 className="text-4xl font-semibold leading-tight tracking-tight text-heading">
+        <div className="max-w-lg">
+          <h1 className="text-3xl font-semibold leading-tight tracking-tight text-heading xl:text-4xl">
             Select a project.
             <br />
             <span className="bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
@@ -64,7 +66,7 @@ export function LoginPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-6 text-sm text-faint">
+        <div className="flex flex-wrap items-center gap-4 text-sm text-faint sm:gap-6">
           <div className="flex items-center gap-2">
             <IconShield width={16} height={16} className="text-emerald-500" />
             Role-based access
@@ -74,25 +76,25 @@ export function LoginPage() {
             n8n report triggers
           </div>
         </div>
-      </div>
+        </div>
 
-      <div className="flex flex-1 items-center justify-center px-6 py-12">
+        <div className="flex w-full min-w-0 items-center justify-center px-4 pb-8 pt-20 sm:px-6 md:px-0 md:py-10 lg:py-12">
         <div className="w-full max-w-md">
-          <div className="mb-8 flex items-center justify-between lg:hidden">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600">
-                <span className="font-bold text-white">B</span>
-              </div>
-              <p className="text-lg font-semibold text-heading">{APP_NAME}</p>
+          <div className="mb-6 flex items-center gap-3 md:hidden">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600">
+              <span className="font-bold text-white">B</span>
             </div>
+            <p className="text-lg font-semibold text-heading">{APP_NAME}</p>
           </div>
 
-          <div className="glass-card rounded-2xl p-8">
+          <div className="glass-card rounded-2xl p-5 sm:p-8">
             <p className="text-sm font-medium text-emerald-500">Welcome back</p>
-            <h2 className="mt-1 text-2xl font-semibold text-heading">Sign in to your account</h2>
+            <h2 className="mt-1 text-xl font-semibold text-heading sm:text-2xl">
+              Sign in to your account
+            </h2>
             <p className="mt-2 text-sm text-muted">Use your admin credentials to continue.</p>
 
-            <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+            <form className="mt-6 space-y-5 sm:mt-8" onSubmit={handleSubmit}>
               <Input
                 label="Email"
                 type="email"
@@ -125,6 +127,7 @@ export function LoginPage() {
               </Button>
             </form>
           </div>
+        </div>
         </div>
       </div>
     </main>

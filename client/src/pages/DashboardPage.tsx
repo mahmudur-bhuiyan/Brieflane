@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { AppLayout } from '../components/AppLayout';
 import { IconFileText, IconFolder, IconSparkles, IconUsers } from '../components/icons';
 import { Badge } from '../components/ui/Badge';
@@ -13,7 +14,8 @@ const quickLinks = [
     title: 'Projects',
     description: 'Sync from ActiveCollab and manage client details.',
     icon: IconFolder,
-    status: 'Coming in Phase 2',
+    status: 'Available now',
+    to: '/projects',
   },
   {
     title: 'Reports',
@@ -27,6 +29,7 @@ const quickLinks = [
     icon: IconUsers,
     status: 'Available now',
     adminOnly: true,
+    to: '/users',
   },
 ];
 
@@ -48,7 +51,7 @@ export function DashboardPage() {
         description="Manage projects, users, and client reports from one place."
       />
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3 xl:mb-8">
         <Card className="relative overflow-hidden">
           <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-emerald-500/10 blur-2xl" />
           <p className="text-sm text-muted">Your role</p>
@@ -67,15 +70,17 @@ export function DashboardPage() {
           <p className="mt-1 text-xs text-faint">Signed in and authenticated</p>
         </Card>
 
-        <Card className="relative overflow-hidden sm:col-span-2 lg:col-span-1">
+        <Card className="relative overflow-hidden md:col-span-2 xl:col-span-1">
           <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-amber-500/10 blur-2xl" />
           <p className="text-sm text-muted">Platform status</p>
-          <div className="mt-2 flex items-center gap-2">
-            <span className="relative flex h-2.5 w-2.5">
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5 shrink-0">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40" />
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
             </span>
-            <p className="text-lg font-semibold text-heading">All systems operational</p>
+            <p className="text-base font-semibold text-heading sm:text-lg">
+              All systems operational
+            </p>
           </div>
           <p className="mt-1 text-xs text-faint">API connected</p>
         </Card>
@@ -99,21 +104,31 @@ export function DashboardPage() {
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-faint">
           Quick links
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {visibleLinks.map((link) => (
-            <Card key={link.title} className="transition hover:border-[var(--border-strong)]">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-subtle text-muted ring-1 ring-[var(--border)]">
-                  <link.icon width={18} height={18} />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {visibleLinks.map((link) => {
+            const card = (
+              <Card className="transition hover:border-[var(--border-strong)]">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-subtle text-muted ring-1 ring-[var(--border)]">
+                    <link.icon width={18} height={18} />
+                  </div>
+                  <Badge variant={link.status === 'Available now' ? 'success' : 'neutral'}>
+                    {link.status}
+                  </Badge>
                 </div>
-                <Badge variant={link.status === 'Available now' ? 'success' : 'neutral'}>
-                  {link.status}
-                </Badge>
-              </div>
-              <h3 className="mt-4 font-semibold text-heading">{link.title}</h3>
-              <p className="mt-1 text-sm text-muted">{link.description}</p>
-            </Card>
-          ))}
+                <h3 className="mt-4 font-semibold text-heading">{link.title}</h3>
+                <p className="mt-1 text-sm text-muted">{link.description}</p>
+              </Card>
+            );
+
+            return link.to ? (
+              <Link key={link.title} to={link.to} className="block">
+                {card}
+              </Link>
+            ) : (
+              <div key={link.title}>{card}</div>
+            );
+          })}
         </div>
       </div>
     </AppLayout>

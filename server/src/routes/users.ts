@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { requireRoles } from '../middleware/requireRoles.js';
 import { createUserSchema, updateUserSchema, type UserRecord } from '../schemas/user.js';
+import { setUserAssignmentsSchema } from '../schemas/assignment.js';
 
 export const usersRouter = Router();
 
@@ -32,6 +33,7 @@ function toUserRecord(user: {
 
 usersRouter.get('/', async (_req, res) => {
   const users = await prisma.user.findMany({
+    where: { role: { not: 'SUPER_ADMIN' } },
     orderBy: { createdAt: 'desc' },
     select: {
       id: true,
@@ -45,6 +47,114 @@ usersRouter.get('/', async (_req, res) => {
   });
 
   res.json({ users: users.map(toUserRecord) });
+});
+
+usersRouter.get('/:id/assignments', async (req, res) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.params.id },
+    select: { id: true, role: true },
+  });
+
+  if (!user) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+
+  if (user.role !== 'PROJECT_MANAGER') {
+    res.json({ assignments: [] });
+    return;
+  }
+
+  const assignments = await prisma.projectAssignment.findMany({
+    where: { userId: user.id },
+    include: {
+      project: {
+        select: { id: true, name: true, acProjectId: true },
+      },
+    },
+    orderBy: { assignedAt: 'desc' },
+  });
+
+  res.json({
+    assignments: assignments.map((row) => ({
+      projectId: row.projectId,
+      projectName: row.project.name,
+      acProjectId: row.project.acProjectId,
+      assignedAt: row.assignedAt.toISOString(),
+    })),
+  });
+});
+
+usersRouter.put('/:id/assignments', async (req, res) => {
+  const parsed = setUserAssignmentsSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten().fieldErrors });
+    return;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: req.params.id },
+    select: { id: true, role: true },
+  });
+
+  if (!user) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+
+  if (user.role !== 'PROJECT_MANAGER') {
+    res.status(400).json({ error: 'Assignments apply only to Project Managers' });
+    return;
+  }
+
+  const { projectIds } = parsed.data;
+  const uniqueProjectIds = [...new Set(projectIds)];
+
+  if (uniqueProjectIds.length > 0) {
+    const projects = await prisma.project.findMany({
+      where: { id: { in: uniqueProjectIds } },
+      select: { id: true },
+    });
+
+    if (projects.length !== uniqueProjectIds.length) {
+      res.status(400).json({ error: 'One or more projects were not found' });
+      return;
+    }
+  }
+
+  await prisma.$transaction([
+    prisma.projectAssignment.deleteMany({ where: { userId: user.id } }),
+    ...(uniqueProjectIds.length > 0
+      ? [
+          prisma.projectAssignment.createMany({
+            data: uniqueProjectIds.map((projectId) => ({
+              userId: user.id,
+              projectId,
+            })),
+          }),
+        ]
+      : []),
+  ]);
+
+  const assignments = await prisma.projectAssignment.findMany({
+    where: { userId: user.id },
+    include: {
+      project: {
+        select: { id: true, name: true, acProjectId: true },
+      },
+    },
+    orderBy: { assignedAt: 'desc' },
+  });
+
+  res.json({
+    assignments: assignments.map((row) => ({
+      projectId: row.projectId,
+      projectName: row.project.name,
+      acProjectId: row.project.acProjectId,
+      assignedAt: row.assignedAt.toISOString(),
+    })),
+  });
 });
 
 usersRouter.post('/', async (req, res) => {

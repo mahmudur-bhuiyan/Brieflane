@@ -161,6 +161,8 @@ flowchart TB
 | POST | `/api/users` | Super Admin |
 | PATCH | `/api/users/:id` | Super Admin |
 | DELETE | `/api/users/:id` | Super Admin (soft deactivate) |
+| GET | `/api/users/:id/assignments` | Super Admin |
+| PUT | `/api/users/:id/assignments` | Super Admin — set PM project access |
 
 ### Projects
 
@@ -581,22 +583,32 @@ With an existing n8n workflow and AC access, Phase 3 is often the fastest if the
 
 ## 12. Definition of Done (v1 Launch)
 
-- [ ] Super Admin can create Project Managers
-- [ ] Projects synced from ActiveCollab into Neon
-- [ ] Custom fields (client email, etc.) editable and saved
+- [x] Super Admin can create Project Managers
+- [x] Projects synced from ActiveCollab into Neon
+- [x] Custom fields (client email, etc.) editable and saved
+- [x] PM sees only assigned projects (Step 9)
 - [ ] Generate Report triggers n8n without manual input
 - [ ] Report history shows status and who triggered it
 - [ ] Deployed to production with Neon
 - [ ] Docs: setup, env vars, n8n payload contract
 
+> **Live progress:** see [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)
+
 ---
 
 ## 13. What to Do First (This Week)
 
-1. **Step 1** — Write webhook payload doc from your current n8n workflow
-2. **Step 2** — Scaffold `brieflane` repo
-3. **Step 3** — Neon + Prisma + health check
-4. **Step 4** — Login + Super Admin bootstrap
+**Completed through Step 9.** Next priorities:
+
+1. **Step 11** — n8n webhook + `POST /api/projects/:id/generate-report`
+2. **Step 13** — Report history UI
+3. **Step 12** — Update n8n workflow + `docs/n8n-workflow.md`
+
+---
+
+## Implementation notes (repo structure)
+
+The codebase uses `client/` and `server/` instead of the `apps/web` + `apps/api` monorepo layout described in Step 2. Prisma schema and migrations live in `server/prisma/`.
 
 ---
 

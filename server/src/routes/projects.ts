@@ -7,6 +7,11 @@ import {
   requireActiveCollabService,
 } from '../lib/activecollab/client.js';
 import { prisma } from '../lib/prisma.js';
+import {
+  assignProjectToUser,
+  projectListFilter,
+  userCanAccessProject,
+} from '../lib/project-access.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { requireRoles } from '../middleware/requireRoles.js';
 import { createProjectSchema, updateProjectSchema } from '../schemas/project.js';
@@ -51,11 +56,14 @@ function handleActiveCollabError(error: unknown, res: Response) {
 }
 
 projectsRouter.get('/', async (req, res) => {
+  const user = req.user!;
+
   const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
   const includeArchived = req.query.includeArchived === 'true';
 
   const projects = await prisma.project.findMany({
     where: {
+      ...projectListFilter(user),
       ...(includeArchived ? {} : { status: 'ACTIVE' }),
       ...(search && {
         name: { contains: search, mode: 'insensitive' },
@@ -177,6 +185,10 @@ projectsRouter.post('/', async (req, res) => {
     },
   });
 
+  if (req.user?.role === 'PROJECT_MANAGER') {
+    await assignProjectToUser(req.user.id, project.id);
+  }
+
   res.status(201).json({ project: toProjectRecord(project) });
 });
 
@@ -190,7 +202,7 @@ projectsRouter.get('/:id', async (req, res) => {
 
   const project = await prisma.project.findUnique({ where: { id } });
 
-  if (!project) {
+  if (!project || !(await userCanAccessProject(req.user!, id))) {
     res.status(404).json({ error: 'Project not found' });
     return;
   }
@@ -215,12 +227,17 @@ projectsRouter.patch('/:id', async (req, res) => {
 
   const existing = await prisma.project.findUnique({ where: { id } });
 
-  if (!existing) {
+  if (!existing || !(await userCanAccessProject(req.user!, id))) {
     res.status(404).json({ error: 'Project not found' });
     return;
   }
 
   const { name, clientName, clientEmail, reportRecipients, customMetadata, status } = parsed.data;
+
+  if (status !== undefined && req.user?.role !== 'SUPER_ADMIN') {
+    res.status(403).json({ error: 'Forbidden' });
+    return;
+  }
 
   const project = await prisma.project.update({
     where: { id },

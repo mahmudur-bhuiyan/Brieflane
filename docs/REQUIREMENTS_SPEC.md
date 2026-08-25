@@ -138,7 +138,7 @@ Replace manual trigger fields with expressions, e.g.:
 
 **Rationale:** Matches plan risk mitigation (“PM sees all projects”); `project_assignments` table in Step 9. Super Admin assigns PMs before go-live.
 
-Until Step 9 ships: PM role can be disabled or limited to dev/staging.
+**Status (2026-08-25):** Step 9 implemented — `project_assignments` table, `PUT /api/users/:id/assignments`, PM project list filtered by assignment.
 
 ---
 
@@ -156,5 +156,5 @@ Until Step 9 ships: PM role can be disabled or limited to dev/staging.
 
 ## References
 
-- Full plan: [PROJECT_PLAN.md](./PROJECT_PLAN.md)  
-- Implementation starts at Step 2 (repo scaffold) after this doc is approved.
+- Full plan: [PROJECT_PLAN.md](./PROJECT_PLAN.md)
+- Implementation progress: [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)

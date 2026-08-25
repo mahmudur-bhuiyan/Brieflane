@@ -132,3 +132,22 @@ export function IconArrowLeft(props: IconProps) {
     </svg>
   );
 }
+
+export function IconMenu(props: IconProps) {
+  return (
+    <svg {...defaults} {...props}>
+      <path d="M4 5h16" />
+      <path d="M4 12h16" />
+      <path d="M4 19h16" />
+    </svg>
+  );
+}
+
+export function IconUser(props: IconProps) {
+  return (
+    <svg {...defaults} {...props}>
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}

@@ -20,6 +20,21 @@ export type UserResponse = {
   user: UserRecord;
 };
 
+export type UserAssignmentRecord = {
+  projectId: string;
+  projectName: string;
+  acProjectId: number;
+  assignedAt: string;
+};
+
+export type UserAssignmentsResponse = {
+  assignments: UserAssignmentRecord[];
+};
+
+export type SetUserAssignmentsInput = {
+  projectIds: string[];
+};
+
 export type CreateUserInput = {
   email: string;
   password: string;

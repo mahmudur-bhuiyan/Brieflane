@@ -184,7 +184,7 @@ export function ProjectDetailPage() {
           description="Client email is required before generating reports (Step 11)."
         />
 
-        <form className="space-y-4 max-w-xl" onSubmit={handleSubmit}>
+        <form className="w-full max-w-3xl space-y-4" onSubmit={handleSubmit}>
           <Input
             label="Project name"
             required
@@ -211,14 +211,14 @@ export function ProjectDetailPage() {
             placeholder="cc@company.com, billing@company.com"
           />
           <label className="block">
-            <span className="text-sm font-medium text-slate-300">Custom metadata (JSON)</span>
+            <span className="text-sm font-medium text-muted">Custom metadata (JSON)</span>
             <textarea
               rows={5}
               value={form.customMetadata}
               onChange={(e) =>
                 setForm((prev) => prev && { ...prev, customMetadata: e.target.value })
               }
-              className="mt-1.5 w-full rounded-xl border border-white/10 bg-white/5 px-3.5 py-2.5 font-mono text-sm text-slate-100 outline-none transition focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20"
+              className="input-field font-mono"
             />
           </label>
 
@@ -238,8 +238,8 @@ export function ProjectDetailPage() {
             </Select>
           )}
 
-          <div className="flex justify-end gap-3 pt-2">
-            <Button type="submit" disabled={updateProject.isPending}>
+          <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+            <Button type="submit" disabled={updateProject.isPending} className="w-full sm:w-auto">
               {updateProject.isPending ? 'Saving…' : 'Save changes'}
             </Button>
           </div>

@@ -4,6 +4,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { SuperAdminRoute } from './components/SuperAdminRoute';
 import { DashboardPage } from './pages/DashboardPage';
 import { ProjectsPage } from './pages/ProjectsPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { UsersPage } from './pages/UsersPage';
 
@@ -16,6 +17,7 @@ function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/projects/:id" element={<ProjectDetailPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
       </Route>
 
       <Route element={<SuperAdminRoute />}>

@@ -103,9 +103,9 @@ function CreateProjectModal({
 
         {error && <p className="text-sm text-red-400">{error}</p>}
 
-        <div className="flex justify-end gap-3 pt-2">
-          <Button variant="secondary" type="button" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={createProject.isPending}>
+        <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+          <Button variant="secondary" type="button" onClick={onClose} className="w-full sm:w-auto">Cancel</Button>
+          <Button type="submit" disabled={createProject.isPending} className="w-full sm:w-auto">
             {createProject.isPending ? 'Creating…' : 'Create project'}
           </Button>
         </div>
@@ -159,12 +159,17 @@ export function ProjectsPage() {
         title="Projects"
         description="Import projects from ActiveCollab, then enrich them with client email and notes."
         action={
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={handleSync} disabled={syncProjects.isPending}>
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap md:w-auto">
+            <Button
+              variant="secondary"
+              onClick={handleSync}
+              disabled={syncProjects.isPending}
+              className="w-full sm:w-auto"
+            >
               <IconRefresh width={16} height={16} />
               {syncProjects.isPending ? 'Syncing…' : 'Sync from AC'}
             </Button>
-            <Button onClick={() => setShowCreate(true)}>
+            <Button onClick={() => setShowCreate(true)} className="w-full sm:w-auto">
               <IconPlus width={16} height={16} />
               Add project
             </Button>
@@ -181,7 +186,7 @@ export function ProjectsPage() {
       )}
 
       <Card className="mb-6" padding={false}>
-        <div className="border-b border-white/5 p-4">
+        <div className="border-b border-subtle p-4">
           <Input
             label="Search by name"
             placeholder="Filter projects…"
@@ -191,13 +196,13 @@ export function ProjectsPage() {
         </div>
 
         {isPending && (
-          <p className="px-6 py-8 text-sm text-slate-400">Loading projects…</p>
+          <p className="px-4 py-8 text-sm text-muted sm:px-6">Loading projects…</p>
         )}
 
         {!isPending && projects.length === 0 && (
-          <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-            <IconFolder className="mb-4 text-slate-600" width={40} height={40} />
-            <p className="text-sm text-slate-400">
+          <div className="flex flex-col items-center justify-center px-4 py-16 text-center sm:px-6">
+            <IconFolder className="mb-4 text-disabled" width={40} height={40} />
+            <p className="text-sm text-muted">
               {search.trim()
                 ? 'No projects match your search.'
                 : 'No projects yet. Sync from ActiveCollab or add one manually.'}
@@ -206,9 +211,46 @@ export function ProjectsPage() {
         )}
 
         {!isPending && projects.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-white/5 text-xs uppercase tracking-wider text-slate-500">
+          <>
+            <div className="space-y-3 p-4 lg:hidden">
+              {projects.map((project) => (
+                <div
+                  key={project.id}
+                  className="rounded-xl border border-subtle bg-subtle p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium text-heading">{project.name}</p>
+                      {project.clientName && (
+                        <p className="mt-0.5 text-xs text-faint">{project.clientName}</p>
+                      )}
+                      <p className="mt-2 text-xs text-muted">AC ID: {project.acProjectId}</p>
+                    </div>
+                    {project.clientEmail ? (
+                      <Badge variant="success">Ready</Badge>
+                    ) : (
+                      <Badge variant="warning">Missing email</Badge>
+                    )}
+                  </div>
+                  <p className="mt-3 truncate text-sm text-muted">
+                    {project.clientEmail || 'No client email'}
+                  </p>
+                  <p className="mt-1 text-xs text-faint">
+                    {formatSyncedAt(project.lastSyncedAt)}
+                  </p>
+                  <Link
+                    to={`/projects/${project.id}`}
+                    className="mt-4 flex w-full items-center justify-center rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-medium text-heading transition hover:bg-[var(--hover-bg)]"
+                  >
+                    Edit project
+                  </Link>
+                </div>
+              ))}
+            </div>
+
+            <div className="table-scroll hidden lg:block">
+              <table className="min-w-[800px] w-full text-left text-sm">
+              <thead className="border-b border-subtle text-xs uppercase tracking-wider text-faint">
                 <tr>
                   <th className="px-6 py-3">Name</th>
                   <th className="px-6 py-3">AC ID</th>
@@ -219,28 +261,28 @@ export function ProjectsPage() {
               </thead>
               <tbody>
                 {projects.map((project) => (
-                  <tr key={project.id} className="border-b border-white/5 last:border-0">
+                  <tr key={project.id} className="border-b border-subtle last:border-0">
                     <td className="px-6 py-4">
-                      <div className="font-medium text-white">{project.name}</div>
+                      <div className="font-medium text-heading">{project.name}</div>
                       {project.clientName && (
-                        <p className="mt-0.5 text-xs text-slate-500">{project.clientName}</p>
+                        <p className="mt-0.5 text-xs text-faint">{project.clientName}</p>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-slate-400">{project.acProjectId}</td>
+                    <td className="px-6 py-4 text-muted">{project.acProjectId}</td>
                     <td className="px-6 py-4">
                       {project.clientEmail ? (
-                        <span className="text-slate-300">{project.clientEmail}</span>
+                        <span className="text-body">{project.clientEmail}</span>
                       ) : (
                         <Badge variant="warning">Missing</Badge>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-slate-400">
+                    <td className="px-6 py-4 text-muted">
                       {formatSyncedAt(project.lastSyncedAt)}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <Link
                         to={`/projects/${project.id}`}
-                        className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/5"
+                        className="rounded-lg border border-[var(--input-border)] px-3 py-1.5 text-xs text-muted transition hover:bg-[var(--hover-bg)]"
                       >
                         Edit
                       </Link>
@@ -249,7 +291,8 @@ export function ProjectsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
+          </>
         )}
       </Card>
 

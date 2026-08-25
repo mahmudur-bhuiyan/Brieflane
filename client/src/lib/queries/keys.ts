@@ -13,5 +13,6 @@ export const queryKeys = {
   users: {
     all: ['users'] as const,
     list: ['users', 'list'] as const,
+    assignments: (userId: string) => ['users', 'assignments', userId] as const,
   },
 };
