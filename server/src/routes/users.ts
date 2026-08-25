@@ -1,5 +1,11 @@
 import { Router } from 'express';
+import type { Prisma } from '@prisma/client';
 import { hashPassword } from '../lib/auth.js';
+import {
+  buildPaginationMeta,
+  parsePagination,
+  parseSort,
+} from '../lib/pagination.js';
 import { prisma } from '../lib/prisma.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { requireRoles } from '../middleware/requireRoles.js';
@@ -10,6 +16,55 @@ export const usersRouter = Router();
 
 usersRouter.use(authMiddleware);
 usersRouter.use(requireRoles('SUPER_ADMIN'));
+
+const USER_SORT_FIELDS = ['name', 'email', 'role', 'status', 'createdAt'] as const;
+type UserSortField = (typeof USER_SORT_FIELDS)[number];
+
+const userSelect = {
+  id: true,
+  email: true,
+  name: true,
+  role: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
+
+const baseUserWhere: Prisma.UserWhereInput = {
+  role: { not: 'SUPER_ADMIN' },
+};
+
+function buildUserSearchWhere(search: string): Prisma.UserWhereInput {
+  if (!search) {
+    return {};
+  }
+
+  return {
+    OR: [
+      { name: { contains: search, mode: 'insensitive' } },
+      { email: { contains: search, mode: 'insensitive' } },
+    ],
+  };
+}
+
+function buildUserOrderBy(
+  sortBy: UserSortField,
+  sortOrder: 'asc' | 'desc',
+): Prisma.UserOrderByWithRelationInput {
+  switch (sortBy) {
+    case 'name':
+      return { name: sortOrder };
+    case 'email':
+      return { email: sortOrder };
+    case 'role':
+      return { role: sortOrder };
+    case 'status':
+      return { status: sortOrder };
+    case 'createdAt':
+    default:
+      return { createdAt: sortOrder };
+  }
+}
 
 function toUserRecord(user: {
   id: string;
@@ -31,22 +86,54 @@ function toUserRecord(user: {
   };
 }
 
-usersRouter.get('/', async (_req, res) => {
-  const users = await prisma.user.findMany({
-    where: { role: { not: 'SUPER_ADMIN' } },
-    orderBy: { createdAt: 'desc' },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      status: true,
-      createdAt: true,
-      updatedAt: true,
+usersRouter.get('/', async (req, res) => {
+  const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+  const { page, pageSize, skip } = parsePagination(req.query);
+  const { sortBy, sortOrder } = parseSort(req.query, USER_SORT_FIELDS, 'createdAt', 'desc');
+  const where: Prisma.UserWhereInput = {
+    ...baseUserWhere,
+    ...buildUserSearchWhere(search),
+  };
+
+  const [users, total, statsTotal, statsActive] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      orderBy: buildUserOrderBy(sortBy, sortOrder),
+      skip,
+      take: pageSize,
+      select: userSelect,
+    }),
+    prisma.user.count({ where }),
+    prisma.user.count({ where: baseUserWhere }),
+    prisma.user.count({ where: { ...baseUserWhere, status: 'ACTIVE' } }),
+  ]);
+
+  res.json({
+    users: users.map(toUserRecord),
+    pagination: buildPaginationMeta(page, pageSize, total),
+    stats: {
+      total: statsTotal,
+      active: statsActive,
+      inactive: statsTotal - statsActive,
     },
   });
+});
 
-  res.json({ users: users.map(toUserRecord) });
+usersRouter.get('/:id', async (req, res) => {
+  const user = await prisma.user.findFirst({
+    where: {
+      id: req.params.id,
+      ...baseUserWhere,
+    },
+    select: userSelect,
+  });
+
+  if (!user) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+
+  res.json({ user: toUserRecord(user) });
 });
 
 usersRouter.get('/:id/assignments', async (req, res) => {

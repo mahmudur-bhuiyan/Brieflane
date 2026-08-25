@@ -14,7 +14,7 @@ import {
   useProjectsQuery,
   useSyncProjectsMutation,
 } from '../lib/queries/projects';
-import type { CreateProjectInput } from '../types/project';
+import type { ActiveCollabCredentials, CreateProjectInput } from '../types/project';
 
 type CreateFormState = {
   acProjectId: string;
@@ -119,15 +119,91 @@ function formatSyncedAt(value: string | null): string {
   return new Date(value).toLocaleString();
 }
 
+function SyncActiveCollabModal({
+  onClose,
+  onSynced,
+}: {
+  onClose: () => void;
+  onSynced: (message: string) => void;
+}) {
+  const syncProjects = useSyncProjectsMutation();
+  const [form, setForm] = useState<ActiveCollabCredentials>({ username: '', password: '' });
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+
+    const username = form.username.trim();
+
+    if (!username || !form.password) {
+      setError('Enter your ActiveCollab email or username and password');
+      return;
+    }
+
+    try {
+      const result = await syncProjects.mutateAsync({
+        username,
+        password: form.password,
+      });
+
+      onSynced(
+        `Synced ${result.synced} projects (${result.created} new, ${result.updated} updated).`,
+      );
+      onClose();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to sync from ActiveCollab'));
+    }
+  }
+
+  return (
+    <Modal
+      title="Sync from ActiveCollab"
+      description="Sign in with your ActiveCollab account. Credentials are used only for this sync and are not stored."
+      onClose={onClose}
+    >
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        <Input
+          label="Email or username"
+          type="text"
+          required
+          autoComplete="username"
+          value={form.username}
+          onChange={(e) => setForm((prev) => ({ ...prev, username: e.target.value }))}
+        />
+        <Input
+          label="Password"
+          type="password"
+          required
+          autoComplete="current-password"
+          value={form.password}
+          onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
+        />
+
+        {error && <p className="text-sm text-red-400">{error}</p>}
+
+        <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+          <Button variant="secondary" type="button" onClick={onClose} className="w-full sm:w-auto">
+            Cancel
+          </Button>
+          <Button type="submit" disabled={syncProjects.isPending} className="w-full sm:w-auto">
+            {syncProjects.isPending ? 'Syncing…' : 'Sync projects'}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 export function ProjectsPage() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [showSync, setShowSync] = useState(false);
 
   const { data, isPending, isError, error } = useProjectsQuery(debouncedSearch);
-  const syncProjects = useSyncProjectsMutation();
 
   const projects = data?.projects ?? [];
   const loadError = isError
@@ -139,18 +215,10 @@ export function ProjectsPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  async function handleSync() {
+  function handleOpenSync() {
     setSyncMessage(null);
     setSyncError(null);
-
-    try {
-      const result = await syncProjects.mutateAsync();
-      setSyncMessage(
-        `Synced ${result.synced} projects (${result.created} new, ${result.updated} updated).`,
-      );
-    } catch (err) {
-      setSyncError(getApiErrorMessage(err, 'Failed to sync from ActiveCollab'));
-    }
+    setShowSync(true);
   }
 
   return (
@@ -162,12 +230,11 @@ export function ProjectsPage() {
           <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap md:w-auto">
             <Button
               variant="secondary"
-              onClick={handleSync}
-              disabled={syncProjects.isPending}
+              onClick={handleOpenSync}
               className="w-full sm:w-auto"
             >
               <IconRefresh width={16} height={16} />
-              {syncProjects.isPending ? 'Syncing…' : 'Sync from AC'}
+              Sync from AC
             </Button>
             <Button onClick={() => setShowCreate(true)} className="w-full sm:w-auto">
               <IconPlus width={16} height={16} />
@@ -300,6 +367,13 @@ export function ProjectsPage() {
         <CreateProjectModal
           onClose={() => setShowCreate(false)}
           onSaved={() => setShowCreate(false)}
+        />
+      )}
+
+      {showSync && (
+        <SyncActiveCollabModal
+          onClose={() => setShowSync(false)}
+          onSynced={(message) => setSyncMessage(message)}
         />
       )}
     </AppLayout>

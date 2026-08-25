@@ -29,6 +29,11 @@ export type SyncProjectsResponse = {
   updated: number;
 };
 
+export type ActiveCollabCredentials = {
+  username: string;
+  password: string;
+};
+
 export type CreateProjectInput = {
   acProjectId: number;
   name: string;

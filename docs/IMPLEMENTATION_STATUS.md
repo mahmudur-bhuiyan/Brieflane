@@ -9,9 +9,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Core steps complete | **9 / 16** (~56%) |
-| Partial | Step 10 (UX polish) |
-| Next up | Steps 11–13 (Reports & n8n) |
+| Core steps complete | **14 / 16** (~88%) |
+| Partial | Step 12 (n8n UI migration — external) |
+| Next up | Step 16 (deployment) |
 
 ---
 
@@ -28,12 +28,12 @@
 | 7 | ActiveCollab service | ✅ Done | `server/src/lib/activecollab/` |
 | 8 | Project sync & CRUD | ✅ Done | Sync, list, detail UI |
 | 9 | PM project assignments | ✅ Done | `project_assignments`, API + Users UI |
-| 10 | Project UX polish | 🟡 Partial | Last synced, empty states; pre-report email validation pending (Step 11) |
-| 11 | n8n webhook integration | ⬜ Not started | |
-| 12 | Update n8n workflow | ⬜ Not started | `docs/n8n-workflow.md` missing |
-| 13 | Report history UI | ⬜ Not started | |
-| 14 | Security hardening | ⬜ Not started | No helmet / rate limits yet |
-| 15 | Testing | ⬜ Not started | `docs/testing.md` missing |
+| 10 | Project UX polish | ✅ Done | Last synced, empty states, client email validation before report |
+| 11 | n8n webhook integration | ✅ Done | `POST /api/projects/:id/generate-report`, n8n client, UI trigger |
+| 12 | Update n8n workflow | 🟡 Partial | `docs/n8n-workflow.md` created; n8n UI change is external |
+| 13 | Report history UI | ✅ Done | `GET /api/report-runs`, dashboard stats, project history |
+| 14 | Security hardening | ✅ Done | Helmet, CORS, rate limits, `docs/SECURITY.md` |
+| 15 | Testing | ✅ Done | Vitest + Supertest, `docs/testing.md`, GitHub Actions CI |
 | 16 | Deployment | ⬜ Not started | |
 
 ---
@@ -63,6 +63,9 @@ brieflane/
 | GET | `/api/projects/ac-preview/:acProjectId` | authenticated |
 | GET | `/api/users/:id/assignments` | Super Admin |
 | PUT | `/api/users/:id/assignments` | Super Admin |
+| POST | `/api/projects/:id/generate-report` | authenticated (project access) |
+| GET | `/api/report-runs` | authenticated (PM: assigned projects) |
+| GET | `/api/report-runs/:id` | authenticated (PM: assigned projects) |
 
 All endpoints from PROJECT_PLAN §5 for auth, users, and projects (except report routes) are implemented. PM list/detail routes filter by `project_assignments`.
 
@@ -74,8 +77,8 @@ All endpoints from PROJECT_PLAN §5 for auth, users, and projects (except report
 - [x] Projects synced from ActiveCollab into Neon
 - [x] Custom fields (client email, etc.) editable and saved
 - [x] PM sees only assigned projects (Step 9)
-- [ ] Generate Report triggers n8n without manual input
-- [ ] Report history shows status and who triggered it
+- [x] Generate Report triggers n8n without manual input
+- [x] Report history shows status and who triggered it
 - [ ] Deployed to production with Neon
 - [ ] Docs: setup guide + n8n workflow doc (contract exists in `REQUIREMENTS_SPEC.md`)
 
@@ -107,9 +110,9 @@ npm run dev
 
 | Document | Step | Status |
 |----------|------|--------|
-| `docs/n8n-workflow.md` | 12 | Not created |
-| `docs/n8n-workflow-inventory.md` | 1 | Not created |
-| `docs/testing.md` | 15 | Not created |
+| `docs/n8n-workflow.md` | 12 | Created |
+| `docs/n8n-workflow-inventory.md` | 1 | Template created |
+| `docs/testing.md` | 15 | Created |
 | Root `README.md` | 16 | Not created |
 
 Update this file when completing each step.

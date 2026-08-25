@@ -1,19 +1,23 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AppLayout } from '../components/AppLayout';
-import { IconArrowLeft } from '../components/icons';
+import { ReportRunTable } from '../components/ReportRunTable';
+import { IconArrowLeft, IconMail } from '../components/icons';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card, CardHeader } from '../components/ui/Card';
 import { Input, Select } from '../components/ui/Input';
+import { Modal } from '../components/ui/Modal';
 import { PageHeader } from '../components/ui/PageHeader';
 import { useAuth } from '../context/AuthContext';
 import {
   getApiErrorMessage,
   useArchiveProjectMutation,
+  useGenerateReportMutation,
   useProjectQuery,
   useUpdateProjectMutation,
 } from '../lib/queries/projects';
+import { useReportRunsQuery } from '../lib/queries/report-runs';
 import { isSuperAdmin } from '../lib/roles';
 import type { ProjectRecord, UpdateProjectInput } from '../types/project';
 
@@ -49,12 +53,82 @@ function projectToForm(project: ProjectRecord): FormState {
   };
 }
 
+function GenerateReportModal({
+  project,
+  onClose,
+  onSuccess,
+}: {
+  project: ProjectRecord;
+  onClose: () => void;
+  onSuccess: (message: string) => void;
+}) {
+  const generateReport = useGenerateReportMutation(project.id);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleConfirm() {
+    setError(null);
+
+    try {
+      const result = await generateReport.mutateAsync();
+      onSuccess(`Report workflow started (status: ${result.reportRun.status}).`);
+      onClose();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to trigger report'));
+    }
+  }
+
+  return (
+    <Modal
+      title="Generate report"
+      description={`Send a client report for "${project.name}" via n8n.`}
+      onClose={onClose}
+    >
+      <dl className="space-y-3 text-sm">
+        <div>
+          <dt className="text-muted">ActiveCollab project</dt>
+          <dd className="font-medium text-heading">{project.name} (id {project.acProjectId})</dd>
+        </div>
+        <div>
+          <dt className="text-muted">Primary recipient</dt>
+          <dd className="font-medium text-heading">{project.clientEmail}</dd>
+        </div>
+        {project.reportRecipients.length > 0 && (
+          <div>
+            <dt className="text-muted">Additional recipients</dt>
+            <dd className="text-heading">{project.reportRecipients.join(', ')}</dd>
+          </div>
+        )}
+      </dl>
+
+      {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
+
+      <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <Button variant="secondary" type="button" onClick={onClose} className="w-full sm:w-auto">
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          onClick={handleConfirm}
+          disabled={generateReport.isPending}
+          className="w-full sm:w-auto"
+        >
+          {generateReport.isPending ? 'Sending…' : 'Confirm & send'}
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
 
   const { data, isPending, isError, error: loadError } = useProjectQuery(id);
+  const { data: reportRunsData, isPending: reportRunsPending } = useReportRunsQuery({
+    projectId: id ?? undefined,
+    limit: 20,
+  });
   const updateProject = useUpdateProjectMutation(id ?? '');
   const archiveProject = useArchiveProjectMutation();
 
@@ -62,6 +136,10 @@ export function ProjectDetailPage() {
   const [form, setForm] = useState<FormState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [confirmReport, setConfirmReport] = useState(false);
+
+  const canGenerateReport =
+    project?.status === 'ACTIVE' && Boolean(project.clientEmail?.trim());
 
   useEffect(() => {
     if (project) {
@@ -156,11 +234,27 @@ export function ProjectDetailPage() {
         title={project.name}
         description={`ActiveCollab id ${project.acProjectId}`}
         action={
-          isSuperAdmin(user?.role) && project.status === 'ACTIVE' ? (
-            <Button variant="danger" onClick={handleArchive} disabled={archiveProject.isPending}>
-              Archive
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              onClick={() => setConfirmReport(true)}
+              disabled={!canGenerateReport}
+              className="w-full sm:w-auto"
+            >
+              <IconMail width={16} height={16} />
+              Generate report
             </Button>
-          ) : undefined
+            {isSuperAdmin(user?.role) && project.status === 'ACTIVE' ? (
+              <Button
+                variant="danger"
+                onClick={handleArchive}
+                disabled={archiveProject.isPending}
+                className="w-full sm:w-auto"
+              >
+                Archive
+              </Button>
+            ) : null}
+          </div>
         }
       />
 
@@ -173,6 +267,9 @@ export function ProjectDetailPage() {
             Last synced {new Date(project.lastSyncedAt).toLocaleString()}
           </Badge>
         )}
+        {project.status === 'ACTIVE' && !project.clientEmail?.trim() && (
+          <Badge variant="neutral">Client email required for reports</Badge>
+        )}
       </div>
 
       {saveMessage && <p className="mb-4 text-sm text-emerald-400">{saveMessage}</p>}
@@ -181,7 +278,7 @@ export function ProjectDetailPage() {
       <Card>
         <CardHeader
           title="Project details"
-          description="Client email is required before generating reports (Step 11)."
+          description="Save client email before generating reports."
         />
 
         <form className="w-full max-w-3xl space-y-4" onSubmit={handleSubmit}>
@@ -245,6 +342,33 @@ export function ProjectDetailPage() {
           </div>
         </form>
       </Card>
+
+      <Card className="mt-6">
+        <CardHeader
+          title="Report history"
+          description="Every report trigger for this project, with status and errors."
+        />
+        {reportRunsPending ? (
+          <p className="text-sm text-muted">Loading report history…</p>
+        ) : (
+          <ReportRunTable
+            reportRuns={reportRunsData?.reportRuns ?? []}
+            showProject={false}
+            emptyMessage="No reports triggered for this project yet."
+          />
+        )}
+      </Card>
+
+      {confirmReport && (
+        <GenerateReportModal
+          project={project}
+          onClose={() => setConfirmReport(false)}
+          onSuccess={(message) => {
+            setSaveMessage(message);
+            setError(null);
+          }}
+        />
+      )}
     </AppLayout>
   );
 }

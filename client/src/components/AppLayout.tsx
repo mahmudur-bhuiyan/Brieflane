@@ -34,8 +34,8 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: <IconLayoutDashboard />, end: true },
-  { to: '/projects', label: 'Projects', icon: <IconFolder /> },
   { to: '/users', label: 'Users', icon: <IconUsers />, adminOnly: true },
+  { to: '/projects', label: 'Projects', icon: <IconFolder /> },
 ];
 
 function BrandMark() {
