@@ -6,3 +6,9 @@ dist/
 .DS_Store
 coverage/
 .vite/
+apps/
+
+client/node_modules/
+client/dist/
+server/node_modules/
+server/dist/
