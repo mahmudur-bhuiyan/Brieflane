@@ -10,8 +10,12 @@ import {
 import {
   activeCollabCredentialsSchema,
   activeCollabProjectSearchSchema,
+  activeCollabTaskHoursSchema,
 } from '../schemas/activecollab.js';
-import { searchActiveCollabProjects } from '../lib/activecollab/proxy.js';
+import {
+  fetchAcProjectUserTaskHours,
+  searchActiveCollabProjects,
+} from '../lib/activecollab/proxy.js';
 import { isN8nError, requireN8nReportService } from '../lib/n8n/client.js';
 import { buildN8nWebhookPayload } from '../lib/reports.js';
 import { prisma } from '../lib/prisma.js';
@@ -134,6 +138,33 @@ projectsRouter.post('/sync', async (req, res) => {
       created,
       updated,
     });
+  } catch (error) {
+    handleActiveCollabError(error, res);
+  }
+});
+
+projectsRouter.post('/ac-task-hours', async (req, res) => {
+  const parsed = activeCollabTaskHoursSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten().fieldErrors });
+    return;
+  }
+
+  try {
+    const data = await fetchAcProjectUserTaskHours(
+      {
+        username: parsed.data.username,
+        password: parsed.data.password,
+      },
+      {
+        projectId: parsed.data.projectId,
+        startDate: parsed.data.startDate,
+        endDate: parsed.data.endDate,
+      },
+    );
+
+    res.json({ data });
   } catch (error) {
     handleActiveCollabError(error, res);
   }

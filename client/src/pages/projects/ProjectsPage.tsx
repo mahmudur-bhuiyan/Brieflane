@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '../../lib/toast';
 import { AppLayout } from '../../components/layout/AppLayout';
-import { IconPlus, IconRefresh, IconSearch } from '../../components/common/icons';
+import { IconFileText, IconPencil, IconPlus, IconRefresh, IconSearch, IconTrash } from '../../components/common/icons';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -178,8 +178,17 @@ export function ProjectsPage() {
             <Button
               variant="secondary"
               size="sm"
+              onClick={() => navigate(`/projects/${project.id}/task-hours`)}
+            >
+              <IconFileText width={14} height={14} />
+              Task hours
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => navigate(`/projects/${project.id}`)}
             >
+              <IconPencil width={14} height={14} />
               Edit
             </Button>
             {superAdmin ? (
@@ -189,6 +198,7 @@ export function ProjectsPage() {
                 disabled={deletingId === project.id}
                 onClick={() => setProjectToDelete(project)}
               >
+                <IconTrash width={14} height={14} />
                 {deletingId === project.id ? 'Deleting…' : 'Delete'}
               </Button>
             ) : null}
@@ -311,8 +321,18 @@ export function ProjectsPage() {
                   variant="secondary"
                   size="sm"
                   className="w-full sm:flex-1"
+                  onClick={() => navigate(`/projects/${project.id}/task-hours`)}
+                >
+                  <IconFileText width={14} height={14} />
+                  Task hours
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full sm:flex-1"
                   onClick={() => navigate(`/projects/${project.id}`)}
                 >
+                  <IconPencil width={14} height={14} />
                   Edit project
                 </Button>
                 {superAdmin ? (
@@ -323,6 +343,7 @@ export function ProjectsPage() {
                     disabled={deletingId === project.id}
                     onClick={() => setProjectToDelete(project)}
                   >
+                    <IconTrash width={14} height={14} />
                     {deletingId === project.id ? 'Deleting…' : 'Delete'}
                   </Button>
                 ) : null}

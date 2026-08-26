@@ -12,3 +12,11 @@ export const activeCollabProjectSearchSchema = activeCollabCredentialsSchema.ext
 });
 
 export type ActiveCollabProjectSearchInput = z.infer<typeof activeCollabProjectSearchSchema>;
+
+export const activeCollabTaskHoursSchema = activeCollabCredentialsSchema.extend({
+  projectId: z.coerce.number().int().positive('Project id must be a positive integer'),
+  startDate: z.string().trim().min(1, 'Start date is required'),
+  endDate: z.string().trim().min(1, 'End date is required'),
+});
+
+export type ActiveCollabTaskHoursInput = z.infer<typeof activeCollabTaskHoursSchema>;

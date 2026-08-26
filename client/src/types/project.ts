@@ -76,6 +76,16 @@ export type SearchAcProjectsResponse = {
   count: number;
 };
 
+export type FetchAcTaskHoursInput = ActiveCollabCredentials & {
+  projectId: number;
+  startDate: string;
+  endDate: string;
+};
+
+export type FetchAcTaskHoursResponse = {
+  data: unknown;
+};
+
 export type CreateProjectInput = {
   acProjectId: number;
   name: string;
