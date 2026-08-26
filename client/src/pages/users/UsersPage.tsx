@@ -1,22 +1,23 @@
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AppLayout } from '../components/AppLayout';
-import { IconPlus } from '../components/icons';
-import { Avatar } from '../components/ui/Avatar';
-import { Badge } from '../components/ui/Badge';
-import { Button } from '../components/ui/Button';
-import { Card } from '../components/ui/Card';
-import { DataTable, type DataTableColumn } from '../components/ui/DataTable';
-import { Modal } from '../components/ui/Modal';
-import { PageHeader } from '../components/ui/PageHeader';
+import { AppLayout } from '../../components/layout/AppLayout';
+import { IconPlus } from '../../components/common/icons';
+import { Avatar } from '../../components/ui/Avatar';
+import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
+import { Card } from '../../components/ui/Card';
+import { DataTable, type DataTableColumn } from '../../components/ui/DataTable';
+import { Modal } from '../../components/ui/Modal';
+import { PageHeader } from '../../components/ui/PageHeader';
 import {
   getApiErrorMessage,
   useDeactivateUserMutation,
   useUsersQuery,
-} from '../lib/queries/users';
-import { formatRole } from '../lib/roles';
-import { DEFAULT_PAGE_SIZE, type PageSize, type SortOrder } from '../types/pagination';
-import type { UserRecord } from '../types/user';
+} from '../../lib/queries/users';
+import { toast } from '../../lib/toast';
+import { formatRole } from '../../lib/roles';
+import { DEFAULT_PAGE_SIZE, type PageSize, type SortOrder } from '../../types/pagination';
+import type { UserRecord } from '../../types/user';
 
 export function UsersPage() {
   const navigate = useNavigate();
@@ -28,7 +29,12 @@ export function UsersPage() {
   const [deactivateError, setDeactivateError] = useState<string | null>(null);
   const [userToDeactivate, setUserToDeactivate] = useState<UserRecord | null>(null);
 
-  const { data, isPending, isError, error: loadError } = useUsersQuery({
+  const {
+    data,
+    isPending,
+    isError,
+    error: loadError,
+  } = useUsersQuery({
     search: search || undefined,
     page,
     pageSize,
@@ -39,7 +45,6 @@ export function UsersPage() {
 
   const users = data?.users ?? [];
   const pagination = data?.pagination;
-  const stats = data?.stats;
   const error = isError ? getApiErrorMessage(loadError, 'Failed to load users') : null;
 
   const handleSearchChange = useCallback((value: string) => {
@@ -80,6 +85,7 @@ export function UsersPage() {
     try {
       await deactivateUser.mutateAsync(userToDeactivate.id);
       setUserToDeactivate(null);
+      toast.success('User deactivated.');
     } catch (err) {
       setDeactivateError(getApiErrorMessage(err, 'Failed to deactivate user'));
     }
@@ -125,12 +131,8 @@ export function UsersPage() {
       header: 'Actions',
       width: 20,
       cell: (user) => (
-        <div className="flex flex-wrap justify-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => navigate(`/users/${user.id}/edit`)}
-          >
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" size="sm" onClick={() => navigate(`/users/${user.id}/edit`)}>
             Edit
           </Button>
           {user.status === 'ACTIVE' && (
@@ -160,23 +162,6 @@ export function UsersPage() {
           </Button>
         }
       />
-
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <p className="text-sm text-muted">Total users</p>
-          <p className="mt-1 text-2xl font-semibold text-heading">{stats?.total ?? '—'}</p>
-        </Card>
-        <Card>
-          <p className="text-sm text-muted">Active</p>
-          <p className="mt-1 text-2xl font-semibold text-emerald-500 dark:text-emerald-300">
-            {stats?.active ?? '—'}
-          </p>
-        </Card>
-        <Card>
-          <p className="text-sm text-muted">Inactive</p>
-          <p className="mt-1 text-2xl font-semibold text-faint">{stats?.inactive ?? '—'}</p>
-        </Card>
-      </div>
 
       <Card padding={false}>
         <DataTable

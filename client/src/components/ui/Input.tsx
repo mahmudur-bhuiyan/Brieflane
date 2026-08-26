@@ -18,7 +18,7 @@ import {
   IconLock,
   IconMail,
   IconSearch,
-} from '../icons';
+} from '../common/icons';
 
 type SelectOption = { value: string; label: ReactNode };
 
@@ -221,7 +221,7 @@ export function Input({
       {isPassword && (
         <button
           type="button"
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-faint transition hover:bg-[var(--hover-bg)] hover:text-heading"
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-faint transition hover:bg-(--hover-bg) hover:text-heading"
           aria-label={showPassword ? 'Hide password' : 'Show password'}
           onClick={() => setShowPassword((current) => !current)}
         >

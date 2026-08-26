@@ -1,0 +1,51 @@
+---
+description: Tailwind CSS v4 class naming — use canonical utilities, not deprecated or redundant arbitrary values
+globs: client/src/**/*.{tsx,css}
+alwaysApply: false
+---
+
+# Tailwind CSS v4 (Brieflane client)
+
+This project uses **Tailwind CSS v4** (`tailwindcss@4`, `@tailwindcss/vite`). Prefer v4 canonical utilities so the Tailwind IntelliSense/linter does not warn and classes stay consistent.
+
+## Before adding or editing `className`
+
+1. Prefer a **built-in utility** over an arbitrary value when Tailwind v4 provides one.
+2. Do **not** use v3 gradient direction names — use `bg-linear-to-*`.
+3. After changing Tailwind classes, verify the file has **no Tailwind linter warnings**.
+
+## Gradient directions (linear)
+
+Use `bg-linear-to-*`, not `bg-gradient-to-*`:
+
+```tsx
+// ❌ BAD — v3 name; triggers linter
+<div className="bg-gradient-to-br from-emerald-500 to-teal-600" />
+<span className="bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text" />
+
+// ✅ GOOD — v4 canonical
+<div className="bg-linear-to-br from-emerald-500 to-teal-600" />
+<span className="bg-linear-to-r from-emerald-500 to-teal-500 bg-clip-text" />
+```
+
+Directions: `bg-linear-to-t`, `-tr`, `-r`, `-br`, `-b`, `-bl`, `-l`, `-tl`.
+
+## Dynamic viewport height (dvh)
+
+Use `*-dvh` utilities, not `[100dvh]` arbitrary values:
+
+```tsx
+// ❌ BAD
+<main className="min-h-[100dvh]" />
+<div className="md:min-h-[100dvh]" />
+
+// ✅ GOOD
+<main className="min-h-dvh" />
+<div className="md:min-h-dvh" />
+```
+
+Same for `h-dvh`, `max-h-dvh`, `min-h-dvh`, etc.
+
+## General rule
+
+When the linter suggests `X can be written as Y`, use **Y** — it is the v4-first utility and matches project conventions.

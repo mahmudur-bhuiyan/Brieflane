@@ -29,9 +29,51 @@ export type SyncProjectsResponse = {
   updated: number;
 };
 
+export type SyncProjectBrieflaneInfo = {
+  name: string;
+  acProjectId: number;
+};
+
+export type SyncProjectSyncedResponse = {
+  status: 'synced';
+  project: ProjectRecord;
+};
+
+export type SyncProjectMismatchResponse = {
+  status: 'mismatch';
+  brieflane: SyncProjectBrieflaneInfo;
+  activeCollab: AcProjectSearchResult;
+  similarProjects: AcProjectSearchResult[];
+};
+
+export type SyncProjectNotFoundResponse = {
+  status: 'not_found';
+  brieflane: SyncProjectBrieflaneInfo;
+  similarProjects: AcProjectSearchResult[];
+};
+
+export type SyncProjectResponse =
+  | SyncProjectSyncedResponse
+  | SyncProjectMismatchResponse
+  | SyncProjectNotFoundResponse;
+
 export type ActiveCollabCredentials = {
   username: string;
   password: string;
+};
+
+export type AcProjectSearchResult = {
+  id: number;
+  name: string;
+};
+
+export type SearchAcProjectsInput = ActiveCollabCredentials & {
+  projectName: string;
+};
+
+export type SearchAcProjectsResponse = {
+  projects: AcProjectSearchResult[];
+  count: number;
 };
 
 export type CreateProjectInput = {

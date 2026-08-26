@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { APP_NAME } from '../constants';
-import { useAuth } from '../context/AuthContext';
+import { APP_NAME } from '../../constants';
+import { useAuth } from '../../context/AuthContext';
 import {
   IconFileText,
   IconFolder,
@@ -12,11 +12,11 @@ import {
   IconUser,
   IconUsers,
   IconX,
-} from './icons';
-import { ThemeToggle } from './ThemeToggle';
-import { Avatar } from './ui/Avatar';
-import { Button } from './ui/Button';
-import { formatRole, isSuperAdmin } from '../lib/roles';
+} from '../common/icons';
+import { ThemeToggle } from '../common/ThemeToggle';
+import { Avatar } from '../ui/Avatar';
+import { Button } from '../ui/Button';
+import { formatRole, isSuperAdmin } from '../../lib/roles';
 
 type AppLayoutProps = {
   title: string;
@@ -40,7 +40,7 @@ const navItems: NavItem[] = [
 
 function BrandMark() {
   return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-900/40">
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-900/40">
       <span className="text-sm font-bold text-white">B</span>
     </div>
   );
@@ -277,7 +277,7 @@ function TopBar({
           {user && (
             <div className="hidden items-center gap-2 rounded-full bg-subtle px-3 py-1.5 text-xs text-muted ring-1 ring-(--border) sm:flex">
               <IconShield width={14} height={14} className="text-emerald-500" />
-              <span className="max-w-[10rem] truncate">{formatRole(user.role)}</span>
+              <span className="max-w-40 truncate">{formatRole(user.role)}</span>
             </div>
           )}
           <ThemeToggle />
@@ -318,8 +318,8 @@ export function AppLayout({ title, description, children }: AppLayoutProps) {
   }
 
   return (
-    <div className="flex min-h-[100dvh] w-full min-w-0 flex-col bg-app">
-      <header className="header-bar sticky top-0 z-30 flex h-16 shrink-0 backdrop-blur-xl">
+    <div className="min-h-dvh w-full min-w-0 bg-app">
+      <header className="header-bar fixed inset-x-0 top-0 z-30 flex h-16 shrink-0 backdrop-blur-xl">
         <TopBar
           title={title}
           description={description}
@@ -330,7 +330,7 @@ export function AppLayout({ title, description, children }: AppLayoutProps) {
         />
       </header>
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex w-full min-h-[calc(100dvh-4rem)] pt-16">
         {sidebarOpen && (
           <button
             type="button"

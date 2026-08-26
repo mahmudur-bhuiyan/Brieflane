@@ -1,10 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import {
-  IconChevronDown,
-  IconChevronLeft,
-  IconChevronRight,
-  IconChevronUp,
-} from '../icons';
+import { IconChevronDown, IconChevronLeft, IconChevronRight, IconChevronUp } from '../common/icons';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import {
   DEFAULT_PAGE_SIZE,
@@ -30,28 +25,30 @@ export type DataTableColumn<T> = {
   cell: (row: T) => ReactNode;
 };
 
-function columnAlignClass(align: DataTableColumnAlign = 'center'): string {
+function columnAlignFlexClass(align: DataTableColumnAlign = 'center'): string {
   switch (align) {
     case 'left':
-      return 'text-left';
+      return 'justify-start';
     case 'right':
-      return 'text-right';
+      return 'justify-end';
     default:
-      return 'text-center';
+      return 'justify-center';
   }
 }
 
-function sortButtonClass(align: DataTableColumnAlign = 'center'): string {
-  const base = 'inline-flex items-center gap-1.5 transition hover:text-heading';
-
+function columnAlignItemsClass(align: DataTableColumnAlign = 'center'): string {
   switch (align) {
+    case 'left':
+      return 'items-start';
     case 'right':
-      return `${base} ml-auto`;
-    case 'center':
-      return `${base} mx-auto`;
+      return 'items-end';
     default:
-      return base;
+      return 'items-center';
   }
+}
+
+function sortButtonClass(): string {
+  return 'inline-flex items-center gap-1.5 transition hover:text-heading';
 }
 
 type DataTableProps<T> = {
@@ -77,13 +74,7 @@ type DataTableProps<T> = {
   renderMobileRow?: (row: T) => ReactNode;
 };
 
-function SortIndicator({
-  active,
-  sortOrder,
-}: {
-  active: boolean;
-  sortOrder: SortOrder;
-}) {
+function SortIndicator({ active, sortOrder }: { active: boolean; sortOrder: SortOrder }) {
   if (!active) {
     return <IconChevronDown width={14} height={14} className="opacity-30" />;
   }
@@ -227,9 +218,7 @@ export function DataTable<T>({
           )}
 
           <div className={`table-scroll ${renderMobileRow ? 'hidden lg:block' : 'block'}`}>
-            <table
-              className={`min-w-[720px] w-full text-sm ${hasColumnWidths ? 'table-fixed' : ''}`}
-            >
+            <table className={`min-w-180 w-full text-sm ${hasColumnWidths ? 'table-fixed' : ''}`}>
               {hasColumnWidths && (
                 <colgroup>
                   {columns.map((column) => (
@@ -245,23 +234,24 @@ export function DataTable<T>({
                   {columns.map((column) => (
                     <th
                       key={column.id}
-                      className={`px-6 py-4 font-medium ${columnAlignClass(column.align)} ${column.headerClassName ?? ''}`}
+                      className={`px-6 py-4 font-medium ${column.headerClassName ?? ''}`}
                     >
-                      {column.sortable ? (
-                        <button
-                          type="button"
-                          onClick={() => handleSort(column.id)}
-                          className={sortButtonClass(column.align)}
-                        >
-                          {column.header}
-                          <SortIndicator
-                            active={sortBy === column.id}
-                            sortOrder={sortOrder}
-                          />
-                        </button>
-                      ) : (
-                        column.header
-                      )}
+                      <div
+                        className={`flex items-center ${columnAlignFlexClass(column.align)}`}
+                      >
+                        {column.sortable ? (
+                          <button
+                            type="button"
+                            onClick={() => handleSort(column.id)}
+                            className={sortButtonClass()}
+                          >
+                            {column.header}
+                            <SortIndicator active={sortBy === column.id} sortOrder={sortOrder} />
+                          </button>
+                        ) : (
+                          column.header
+                        )}
+                      </div>
                     </th>
                   ))}
                 </tr>
@@ -275,9 +265,13 @@ export function DataTable<T>({
                     {columns.map((column) => (
                       <td
                         key={column.id}
-                        className={`px-6 py-4 ${columnAlignClass(column.align)} ${column.cellClassName ?? ''}`}
+                        className={`px-6 py-4 ${column.cellClassName ?? ''}`}
                       >
-                        {column.cell(row)}
+                        <div
+                          className={`flex w-full flex-col ${columnAlignItemsClass(column.align)}`}
+                        >
+                          {column.cell(row)}
+                        </div>
                       </td>
                     ))}
                   </tr>

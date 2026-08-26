@@ -1,12 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { AppLayout } from '../components/AppLayout';
-import { IconArrowLeft, IconUser } from '../components/icons';
-import { Button } from '../components/ui/Button';
-import { Card } from '../components/ui/Card';
-import { Input, Select } from '../components/ui/Input';
-import { PageHeader } from '../components/ui/PageHeader';
-import { useProjectsQuery } from '../lib/queries/projects';
+import { Link, useNavigate } from 'react-router-dom';
+import { AppLayout } from '../../../components/layout/AppLayout';
+import { IconArrowLeft, IconUser } from '../../../components/common/icons';
+import { Button } from '../../../components/ui/Button';
+import { Card } from '../../../components/ui/Card';
+import { Input, Select } from '../../../components/ui/Input';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { useProjectsQuery } from '../../../lib/queries/projects';
 import {
   getApiErrorMessage,
   useCreateUserMutation,
@@ -14,60 +14,38 @@ import {
   useUpdateUserMutation,
   useUserAssignmentsQuery,
   useUserQuery,
-} from '../lib/queries/users';
-import type { UserRole } from '../types/auth';
-import type { CreateUserInput, UpdateUserInput } from '../types/user';
+} from '../../../lib/queries/users';
+import { toast } from '../../../lib/toast';
+import {
+  buildCreateUserPayload,
+  buildUpdateUserPayload,
+  emptyUserForm,
+  userToForm,
+} from '../utils/userForm';
+import type { UserFormMode } from '../types/userForm';
 
-type UserFormMode = 'create' | 'edit';
-
-type UserFormState = {
-  email: string;
-  name: string;
-  role: UserRole;
-  password: string;
-  status: 'ACTIVE' | 'INACTIVE';
-};
-
-const emptyForm: UserFormState = {
-  email: '',
-  name: '',
-  role: 'PROJECT_MANAGER',
-  password: '',
-  status: 'ACTIVE',
-};
-
-function UserForm({
-  mode,
-  userId,
-}: {
-  mode: UserFormMode;
-  userId?: string;
-}) {
+export function UserForm({ mode, userId }: { mode: UserFormMode; userId?: string }) {
   const navigate = useNavigate();
   const createUser = useCreateUserMutation();
   const updateUser = useUpdateUserMutation();
-  const { data: userData, isPending: isUserPending, isError: isUserError } = useUserQuery(
-    mode === 'edit' ? userId : undefined,
-  );
+  const {
+    data: userData,
+    isPending: isUserPending,
+    isError: isUserError,
+  } = useUserQuery(mode === 'edit' ? userId : undefined);
   const user = userData?.user ?? null;
   const setAssignments = useSetUserAssignmentsMutation(user?.id ?? '');
   const { data: projectsData } = useProjectsQuery('');
   const showAssignments = mode === 'edit' && user?.role === 'PROJECT_MANAGER';
   const { data: assignmentsData } = useUserAssignmentsQuery(user?.id, showAssignments);
-  const [form, setForm] = useState<UserFormState>(emptyForm);
+  const [form, setForm] = useState(emptyUserForm);
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(mode === 'create');
 
   useEffect(() => {
     if (mode === 'edit' && user) {
-      setForm({
-        email: user.email,
-        name: user.name ?? '',
-        role: user.role,
-        password: '',
-        status: user.status,
-      });
+      setForm(userToForm(user));
       setInitialized(true);
     }
   }, [mode, user]);
@@ -95,26 +73,16 @@ function UserForm({
 
     try {
       if (mode === 'create') {
-        const payload: CreateUserInput = {
-          email: form.email,
-          password: form.password,
-          role: form.role,
-          ...(form.name.trim() && { name: form.name.trim() }),
-        };
-
-        await createUser.mutateAsync(payload);
+        await createUser.mutateAsync(buildCreateUserPayload(form));
+        toast.success('User created.');
       } else if (user) {
-        const payload: UpdateUserInput = {
-          name: form.name.trim() || null,
-          status: form.status,
-          ...(form.password && { password: form.password }),
-        };
-
-        await updateUser.mutateAsync({ id: user.id, payload });
+        await updateUser.mutateAsync({ id: user.id, payload: buildUpdateUserPayload(form) });
 
         if (user.role === 'PROJECT_MANAGER') {
           await setAssignments.mutateAsync({ projectIds: selectedProjectIds });
         }
+
+        toast.success('User updated.');
       }
 
       navigate('/users');
@@ -166,9 +134,7 @@ function UserForm({
       <PageHeader
         title={mode === 'create' ? 'Add user' : user?.name || user?.email || 'Edit user'}
         description={
-          mode === 'create'
-            ? 'Create a Project Manager account.'
-            : 'Update status or password.'
+          mode === 'create' ? 'Create a Project Manager account.' : 'Update status or password.'
         }
       />
 
@@ -277,13 +243,4 @@ function UserForm({
       </Card>
     </AppLayout>
   );
-}
-
-export function CreateUserPage() {
-  return <UserForm mode="create" />;
-}
-
-export function EditUserPage() {
-  const { id } = useParams<{ id: string }>();
-  return <UserForm mode="edit" userId={id} />;
 }
