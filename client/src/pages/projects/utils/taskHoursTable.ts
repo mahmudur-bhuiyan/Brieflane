@@ -8,6 +8,67 @@ export type ParsedTaskHoursTable = {
   rows: TaskHoursTableRow[];
 };
 
+export type TaskHoursSummary = {
+  projectId: string;
+  projectName: string;
+  startDate: string;
+  endDate: string;
+  totalBillableHours: string;
+  totalNonBillableHours: string;
+  totalLoggedHours: string;
+};
+
+export type TaskHoursColumnAlign = 'left' | 'center' | 'right';
+
+export type TaskHoursDisplayColumn = {
+  id: string;
+  header: string;
+  width: number;
+  align: TaskHoursColumnAlign;
+};
+
+/** Curated columns matching the task-hours reference layout. */
+export const TASK_HOURS_DISPLAY_COLUMNS: TaskHoursDisplayColumn[] = [
+  { id: 'user_name', header: 'User Name', width: 16, align: 'left' },
+  { id: 'job_type', header: 'Job Type', width: 18, align: 'left' },
+  { id: 'task_id', header: 'Task ID', width: 10, align: 'center' },
+  { id: 'task_name', header: 'Task Description', width: 32, align: 'left' },
+  { id: 'hours', header: 'Hours', width: 12, align: 'center' },
+  { id: 'status', header: 'Status', width: 12, align: 'center' },
+];
+
+const DISPLAY_COLUMN_WIDTHS: Record<string, number> = {
+  user_name: 16,
+  job_type: 18,
+  task_id: 10,
+  task_name: 32,
+  task: 32,
+  hours: 12,
+  task_billable_hours: 12,
+  task_non_billable_hours: 12,
+  task_total_logged_hours: 12,
+  status: 12,
+  billable_status: 12,
+};
+
+const DISPLAY_COLUMN_ALIGN: Record<string, TaskHoursColumnAlign> = {
+  user_name: 'left',
+  job_type: 'left',
+  task_id: 'center',
+  task_name: 'left',
+  task: 'left',
+  name: 'left',
+  email: 'left',
+  user_email: 'left',
+  summary: 'left',
+  hours: 'center',
+  task_billable_hours: 'center',
+  task_non_billable_hours: 'center',
+  task_total_logged_hours: 'center',
+  status: 'center',
+  billable_status: 'center',
+};
+
 const ARRAY_KEYS = [
   'data',
   'results',
@@ -30,8 +91,15 @@ const METADATA_KEYS = new Set([
   'message',
   'error',
   'project_id',
+  'project_name',
   'start_date',
   'end_date',
+  'total_billable_hours',
+  'total_non_billable_hours',
+  'total_logged_hours',
+  'user_total_billable_hours',
+  'user_total_non_billable_hours',
+  'user_total_logged_hours',
 ]);
 
 const PREFERRED_COLUMN_ORDER = [
@@ -40,6 +108,8 @@ const PREFERRED_COLUMN_ORDER = [
   'name',
   'email',
   'user_email',
+  'job_type',
+  'job_type_id',
   'task_id',
   'task_name',
   'task',
@@ -50,13 +120,15 @@ const PREFERRED_COLUMN_ORDER = [
   'tracked_time',
   'time',
   'duration',
+  'task_billable_hours',
+  'task_non_billable_hours',
+  'task_total_logged_hours',
   'billable_status',
   'record_date',
   'date',
   'start_date',
   'end_date',
   'summary',
-  'job_type_id',
 ];
 
 const HOUR_KEYS = new Set(['hours', 'value', 'tracked_time', 'time', 'duration', 'total_hours']);
@@ -222,11 +294,14 @@ function scoreCandidateRows(rows: unknown[]): number {
       return score;
     }
 
-    const nestedArrayCount = Object.values(row).filter(
-      (value) => Array.isArray(value) && value.some((entry) => isRecord(entry)),
-    ).length;
+    const nestedItemCount = Object.values(row).reduce<number>((count, value) => {
+      if (Array.isArray(value) && value.some((entry) => isRecord(entry))) {
+        return count + value.length;
+      }
+      return count;
+    }, 0);
 
-    return score + 1 + nestedArrayCount;
+    return score + 1 + nestedItemCount;
   }, 0);
 }
 
@@ -243,6 +318,18 @@ function findArrayItems(data: unknown): unknown[] {
     const candidate = data[key];
     if (Array.isArray(candidate) && candidate.length > 0) {
       return candidate;
+    }
+  }
+
+  for (const key of ARRAY_KEYS) {
+    const wrapper = data[key];
+    if (isRecord(wrapper)) {
+      for (const innerKey of ARRAY_KEYS) {
+        const candidate = (wrapper as Record<string, unknown>)[innerKey];
+        if (Array.isArray(candidate) && candidate.length > 0) {
+          return candidate;
+        }
+      }
     }
   }
 
@@ -365,7 +452,180 @@ function sortColumns(columns: string[]): string[] {
 export function formatTaskHoursColumnHeader(key: string): string {
   const leaf = key.split('.').pop() ?? key;
 
+  if (leaf === 'task_name' || leaf === 'task') {
+    return 'Task Description';
+  }
+
+  if (leaf === 'task_id') {
+    return 'Task ID';
+  }
+
+  if (leaf === 'user_name') {
+    return 'User Name';
+  }
+
+  if (leaf === 'job_type') {
+    return 'Job Type';
+  }
+
   return leaf.replace(/_/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function readSummaryScalar(record: Record<string, unknown>, key: string): string | null {
+  const value = record[key];
+
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value);
+  }
+
+  return null;
+}
+
+export function parseTaskHoursSummary(data: unknown): TaskHoursSummary | null {
+  if (!isRecord(data)) {
+    return null;
+  }
+
+  const nested = isRecord(data.data) ? data.data : null;
+  const source = nested ?? data;
+
+  const projectId = readSummaryScalar(source, 'project_id');
+  const projectName = readSummaryScalar(source, 'project_name');
+  const startDate = readSummaryScalar(source, 'start_date');
+  const endDate = readSummaryScalar(source, 'end_date');
+  const totalBillableHours = readSummaryScalar(source, 'total_billable_hours');
+  const totalNonBillableHours = readSummaryScalar(source, 'total_non_billable_hours');
+  const totalLoggedHours = readSummaryScalar(source, 'total_logged_hours');
+
+  if (
+    !projectId &&
+    !projectName &&
+    !startDate &&
+    !endDate &&
+    !totalBillableHours &&
+    !totalNonBillableHours &&
+    !totalLoggedHours
+  ) {
+    return null;
+  }
+
+  return {
+    projectId: projectId ?? '—',
+    projectName: projectName ?? '—',
+    startDate: startDate ?? '—',
+    endDate: endDate ?? '—',
+    totalBillableHours: totalBillableHours ?? '—',
+    totalNonBillableHours: totalNonBillableHours ?? '—',
+    totalLoggedHours: totalLoggedHours ?? '—',
+  };
+}
+
+export function getTaskHoursColumnWidth(columnKey: string, columnCount: number): number {
+  const leaf = columnKey.split('.').pop() ?? columnKey;
+  return DISPLAY_COLUMN_WIDTHS[leaf] ?? Math.max(8, Math.floor(100 / Math.max(columnCount, 1)));
+}
+
+export function getTaskHoursColumnAlign(columnKey: string): TaskHoursColumnAlign {
+  const leaf = columnKey.split('.').pop() ?? columnKey;
+
+  if (DISPLAY_COLUMN_ALIGN[leaf]) {
+    return DISPLAY_COLUMN_ALIGN[leaf];
+  }
+
+  if (leaf.includes('name') || leaf.includes('summary') || leaf.includes('email')) {
+    return 'left';
+  }
+
+  if (
+    leaf === 'hours' ||
+    leaf === 'value' ||
+    leaf === 'tracked_time' ||
+    leaf === 'time' ||
+    leaf === 'duration' ||
+    leaf.endsWith('_hours') ||
+    leaf === 'task_id' ||
+    leaf.endsWith('_id') ||
+    leaf === 'status' ||
+    leaf === 'billable_status'
+  ) {
+    return 'center';
+  }
+
+  return 'left';
+}
+
+function parseHoursNumber(value: string | undefined): number {
+  if (!value || value === '—') {
+    return 0;
+  }
+
+  const parsed = Number(value.replace(/[^\d.-]/g, ''));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatDecimalHours(value: number): string {
+  return value.toFixed(2);
+}
+
+function toCuratedDisplayRows(flatRows: Record<string, string>[]): TaskHoursTableRow[] | null {
+  const looksLikeTaskHours = flatRows.some(
+    (row) =>
+      (row.user_name || row.name) &&
+      (row.task_name || row.task) &&
+      (row.job_type ||
+        row.task_billable_hours !== undefined ||
+        row.task_non_billable_hours !== undefined),
+  );
+
+  if (!looksLikeTaskHours) {
+    return null;
+  }
+
+  const displayRows: TaskHoursTableRow[] = [];
+
+  flatRows.forEach((row, index) => {
+    const userName = (row.user_name || row.name || '—').trim() || '—';
+    const jobType = (row.job_type || '—').trim() || '—';
+    const taskId = (row.task_id || '—').trim() || '—';
+    const taskName = (row.task_name || row.task || '—').trim() || '—';
+    const billable = parseHoursNumber(row.task_billable_hours);
+    const nonBillable = parseHoursNumber(row.task_non_billable_hours);
+
+    const pushRow = (hours: number, status: 'Billable' | 'Non-Billable') => {
+      const values = {
+        user_name: userName,
+        job_type: jobType,
+        task_id: taskId,
+        task_name: taskName,
+        hours: formatDecimalHours(hours),
+        status,
+      };
+
+      displayRows.push({
+        id: buildRowId(values, displayRows.length + index),
+        values,
+      });
+    };
+
+    if (billable > 0) {
+      pushRow(billable, 'Billable');
+    }
+
+    if (nonBillable > 0) {
+      pushRow(nonBillable, 'Non-Billable');
+    }
+
+    if (billable <= 0 && nonBillable <= 0) {
+      const total = parseHoursNumber(row.task_total_logged_hours || row.hours);
+      pushRow(total, 'Billable');
+    }
+  });
+
+  return displayRows;
 }
 
 export function parseTaskHoursTable(data: unknown): ParsedTaskHoursTable {
@@ -384,6 +644,14 @@ export function parseTaskHoursTable(data: unknown): ParsedTaskHoursTable {
         columnSet.add(key);
       }
     }
+  }
+
+  const curatedRows = toCuratedDisplayRows(flatRows);
+  if (curatedRows) {
+    return {
+      columns: TASK_HOURS_DISPLAY_COLUMNS.map((column) => column.id),
+      rows: curatedRows,
+    };
   }
 
   const columns = sortColumns([...columnSet]);

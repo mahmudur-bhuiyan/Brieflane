@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { IconCopy } from '../../../components/common/icons';
+import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
 import { DataTable, type DataTableColumn } from '../../../components/ui/DataTable';
 import { toast } from '../../../lib/toast';
@@ -7,8 +8,13 @@ import { DEFAULT_PAGE_SIZE, type PageSize, type SortOrder } from '../../../types
 import {
   filterTaskHoursRows,
   formatTaskHoursColumnHeader,
+  getTaskHoursColumnAlign,
+  getTaskHoursColumnWidth,
+  parseTaskHoursSummary,
   parseTaskHoursTable,
   sortTaskHoursRows,
+  TASK_HOURS_DISPLAY_COLUMNS,
+  type TaskHoursSummary,
   type TaskHoursTableRow,
 } from '../utils/taskHoursTable';
 
@@ -40,6 +46,82 @@ function TabButton({
   );
 }
 
+function SummaryField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-heading">{value}</p>
+    </div>
+  );
+}
+
+function TaskHoursSummaryPanel({ summary }: { summary: TaskHoursSummary }) {
+  const dateRange =
+    summary.startDate !== '—' || summary.endDate !== '—'
+      ? `${summary.startDate} – ${summary.endDate}`
+      : '—';
+
+  return (
+    <div className="border-b border-subtle px-4 py-4 sm:px-6">
+      <div className="rounded-xl border border-subtle bg-subtle p-4 sm:p-5">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted">Project</p>
+            <p className="mt-1 truncate text-sm font-semibold text-heading">{summary.projectName}</p>
+          </div>
+          <p className="shrink-0 text-xs text-faint">
+            ID <span className="font-medium tabular-nums text-muted">{summary.projectId}</span>
+          </p>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <SummaryField label="Date Range" value={dateRange} />
+          <SummaryField label="Billable Hours" value={summary.totalBillableHours} />
+          <SummaryField label="Non-Billable Hours" value={summary.totalNonBillableHours} />
+          <SummaryField label="Total Logged Hours" value={summary.totalLoggedHours} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function renderCellValue(columnKey: string, value: string) {
+  const leafKey = columnKey.split('.').pop() ?? columnKey;
+
+  if (leafKey === 'status' || leafKey === 'billable_status') {
+    const isBillable = value.toLowerCase() === 'billable';
+    return <Badge variant={isBillable ? 'success' : 'neutral'}>{value}</Badge>;
+  }
+
+  const isTextColumn =
+    leafKey.includes('name') ||
+    leafKey.includes('summary') ||
+    leafKey.includes('email') ||
+    leafKey === 'job_type';
+  const isHoursColumn =
+    leafKey === 'hours' ||
+    leafKey === 'value' ||
+    leafKey === 'tracked_time' ||
+    leafKey === 'time' ||
+    leafKey === 'duration' ||
+    leafKey.endsWith('_hours');
+  const isIdColumn = leafKey === 'task_id' || leafKey.endsWith('_id');
+
+  return (
+    <span
+      className={
+        isTextColumn
+          ? 'font-medium text-heading'
+          : isHoursColumn || isIdColumn
+            ? 'tabular-nums text-heading'
+            : 'text-muted'
+      }
+    >
+      {value || '—'}
+    </span>
+  );
+}
+
 export function TaskHoursResponseView({ data }: TaskHoursResponseViewProps) {
   const [activeTab, setActiveTab] = useState<TaskHoursViewTab>('table');
   const [search, setSearch] = useState('');
@@ -49,6 +131,7 @@ export function TaskHoursResponseView({ data }: TaskHoursResponseViewProps) {
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
   const formattedJson = useMemo(() => JSON.stringify(data, null, 2), [data]);
+  const summary = useMemo(() => parseTaskHoursSummary(data), [data]);
   const parsedTable = useMemo(() => parseTaskHoursTable(data), [data]);
 
   const filteredRows = useMemo(
@@ -70,40 +153,22 @@ export function TaskHoursResponseView({ data }: TaskHoursResponseViewProps) {
   }, [sortedRows, page, pageSize]);
 
   const columns: DataTableColumn<TaskHoursTableRow>[] = useMemo(() => {
-    const columnWidth =
-      parsedTable.columns.length > 0 ? Math.floor(100 / parsedTable.columns.length) : 100;
+    const displayColumnById = new Map(
+      TASK_HOURS_DISPLAY_COLUMNS.map((column) => [column.id, column]),
+    );
 
     return parsedTable.columns.map((columnKey) => {
+      const displayColumn = displayColumnById.get(columnKey);
       const leafKey = columnKey.split('.').pop() ?? columnKey;
-      const isTextColumn =
-        leafKey.includes('name') || leafKey.includes('summary') || leafKey.includes('email');
-      const isHoursColumn =
-        leafKey === 'hours' ||
-        leafKey === 'value' ||
-        leafKey === 'tracked_time' ||
-        leafKey === 'time' ||
-        leafKey === 'duration' ||
-        leafKey.endsWith('_hours');
 
       return {
         id: columnKey,
-        header: formatTaskHoursColumnHeader(columnKey),
-        width: columnWidth,
-        align: isTextColumn ? 'left' : isHoursColumn ? 'right' : 'center',
+        header: displayColumn?.header ?? formatTaskHoursColumnHeader(columnKey),
+        width:
+          displayColumn?.width ?? getTaskHoursColumnWidth(columnKey, parsedTable.columns.length),
+        align: displayColumn?.align ?? getTaskHoursColumnAlign(columnKey),
         sortable: true,
-        cell: (row: TaskHoursTableRow) => (
-          <span
-            className={
-              isTextColumn
-                ? 'font-medium text-heading'
-                : isHoursColumn
-                  ? 'tabular-nums text-heading'
-                  : 'text-muted'
-            }
-          >
-            {row.values[columnKey] ?? '—'}
-          </span>
-        ),
+        cell: (row: TaskHoursTableRow) => renderCellValue(leafKey, row.values[columnKey] ?? '—'),
       };
     });
   }, [parsedTable.columns]);
@@ -169,24 +234,27 @@ export function TaskHoursResponseView({ data }: TaskHoursResponseViewProps) {
             </p>
           </div>
         ) : (
-          <DataTable
-            columns={columns}
-            data={paginatedRows}
-            rowKey={(row) => row.id}
-            search={search}
-            onSearchChange={handleSearchChange}
-            searchPlaceholder="Search task hours…"
-            page={page}
-            pageSize={pageSize}
-            total={sortedRows.length}
-            onPageChange={setPage}
-            onPageSizeChange={handlePageSizeChange}
-            sortBy={sortBy || parsedTable.columns[0] || ''}
-            sortOrder={sortOrder}
-            onSortChange={handleSortChange}
-            emptyTitle="No matching rows"
-            emptyDescription="Try a different search term."
-          />
+          <>
+            {summary ? <TaskHoursSummaryPanel summary={summary} /> : null}
+            <DataTable
+              columns={columns}
+              data={paginatedRows}
+              rowKey={(row) => row.id}
+              search={search}
+              onSearchChange={handleSearchChange}
+              searchPlaceholder="Search task hours…"
+              page={page}
+              pageSize={pageSize}
+              total={sortedRows.length}
+              onPageChange={setPage}
+              onPageSizeChange={handlePageSizeChange}
+              sortBy={sortBy || parsedTable.columns[0] || ''}
+              sortOrder={sortOrder}
+              onSortChange={handleSortChange}
+              emptyTitle="No matching rows"
+              emptyDescription="Try a different search term."
+            />
+          </>
         )
       ) : (
         <div className="p-4 sm:p-6">

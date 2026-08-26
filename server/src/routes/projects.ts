@@ -267,6 +267,7 @@ projectsRouter.post('/', async (req, res) => {
       clientEmail: clientEmail || null,
       reportRecipients: reportRecipients ?? [],
       customMetadata: toJsonValue(customMetadata ?? {}),
+      lastSyncedAt: new Date(),
     },
   });
 
