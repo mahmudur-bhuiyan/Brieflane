@@ -1,123 +1,26 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { AppLayout } from '../components/AppLayout';
-import { ReportRunTable } from '../components/ReportRunTable';
-import { IconArrowLeft, IconFileText, IconFolder, IconMail, IconUser } from '../components/icons';
-import { Badge } from '../components/ui/Badge';
-import { Button } from '../components/ui/Button';
-import { Card, CardHeader } from '../components/ui/Card';
-import { Input, Select, Textarea } from '../components/ui/Input';
-import { Modal } from '../components/ui/Modal';
-import { PageHeader } from '../components/ui/PageHeader';
-import { useAuth } from '../context/AuthContext';
+import { AppLayout } from '../../components/layout/AppLayout';
+import { ReportRunTable } from '../../components/domain/ReportRunTable';
+import { IconArrowLeft, IconFileText, IconFolder, IconMail, IconUser } from '../../components/common/icons';
+import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
+import { Card, CardHeader } from '../../components/ui/Card';
+import { Input, Select, Textarea } from '../../components/ui/Input';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { useAuth } from '../../context/AuthContext';
 import {
   getApiErrorMessage,
   useArchiveProjectMutation,
-  useGenerateReportMutation,
   useProjectQuery,
   useUpdateProjectMutation,
-} from '../lib/queries/projects';
-import { useReportRunsQuery } from '../lib/queries/report-runs';
-import { isSuperAdmin } from '../lib/roles';
-import type { ProjectRecord, UpdateProjectInput } from '../types/project';
-
-type FormState = {
-  name: string;
-  clientName: string;
-  clientEmail: string;
-  reportRecipients: string;
-  customMetadata: string;
-  status: 'ACTIVE' | 'ARCHIVED';
-};
-
-function parseRecipients(value: string): string[] {
-  return value
-    .split(/[,;\n]/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-function parseMetadata(value: string): Record<string, unknown> {
-  if (!value.trim()) return {};
-  return JSON.parse(value) as Record<string, unknown>;
-}
-
-function projectToForm(project: ProjectRecord): FormState {
-  return {
-    name: project.name,
-    clientName: project.clientName ?? '',
-    clientEmail: project.clientEmail ?? '',
-    reportRecipients: project.reportRecipients.join(', '),
-    customMetadata: JSON.stringify(project.customMetadata, null, 2),
-    status: project.status,
-  };
-}
-
-function GenerateReportModal({
-  project,
-  onClose,
-  onSuccess,
-}: {
-  project: ProjectRecord;
-  onClose: () => void;
-  onSuccess: (message: string) => void;
-}) {
-  const generateReport = useGenerateReportMutation(project.id);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleConfirm() {
-    setError(null);
-
-    try {
-      const result = await generateReport.mutateAsync();
-      onSuccess(`Report workflow started (status: ${result.reportRun.status}).`);
-      onClose();
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to trigger report'));
-    }
-  }
-
-  return (
-    <Modal
-      title="Generate report"
-      description={`Send a client report for "${project.name}" via n8n.`}
-      onClose={onClose}
-    >
-      <dl className="space-y-3 text-sm">
-        <div>
-          <dt className="text-muted">ActiveCollab project</dt>
-          <dd className="font-medium text-heading">{project.name} (id {project.acProjectId})</dd>
-        </div>
-        <div>
-          <dt className="text-muted">Primary recipient</dt>
-          <dd className="font-medium text-heading">{project.clientEmail}</dd>
-        </div>
-        {project.reportRecipients.length > 0 && (
-          <div>
-            <dt className="text-muted">Additional recipients</dt>
-            <dd className="text-heading">{project.reportRecipients.join(', ')}</dd>
-          </div>
-        )}
-      </dl>
-
-      {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
-
-      <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-        <Button variant="secondary" type="button" onClick={onClose} className="w-full sm:w-auto">
-          Cancel
-        </Button>
-        <Button
-          type="button"
-          onClick={handleConfirm}
-          disabled={generateReport.isPending}
-          className="w-full sm:w-auto"
-        >
-          {generateReport.isPending ? 'Sending…' : 'Confirm & send'}
-        </Button>
-      </div>
-    </Modal>
-  );
-}
+} from '../../lib/queries/projects';
+import { useReportRunsQuery } from '../../lib/queries/report-runs';
+import { isSuperAdmin } from '../../lib/roles';
+import type { UpdateProjectInput } from '../../types/project';
+import { GenerateReportModal } from './components/GenerateReportModal';
+import { parseMetadata, parseRecipients, projectToForm } from './utils/projectDetail';
+import type { ProjectFormState } from './types/projectDetail';
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -133,7 +36,7 @@ export function ProjectDetailPage() {
   const archiveProject = useArchiveProjectMutation();
 
   const project = data?.project ?? null;
-  const [form, setForm] = useState<FormState | null>(null);
+  const [form, setForm] = useState<ProjectFormState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [confirmReport, setConfirmReport] = useState(false);

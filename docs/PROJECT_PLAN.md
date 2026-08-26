@@ -33,7 +33,7 @@ Replace manual project name/ID input in n8n with a secure web panel where author
 | Layer | Choice | Why |
 |-------|--------|-----|
 | Frontend | React + Vite + TypeScript | Fast dev, simple admin UI |
-| UI | Tailwind + shadcn/ui | Clean admin panel quickly |
+| UI | Tailwind + typed component folders (`client/src/components/`) | Consistent admin UI; reuse primitives across pages |
 | Backend | Express + TypeScript | Straightforward API + integrations |
 | Database | Neon PostgreSQL | Serverless Postgres, easy scaling |
 | ORM | Prisma | Schema migrations, type safety |
@@ -205,6 +205,65 @@ flowchart TB
 | Report history | ✓ | ✓ |
 | Users management | ✓ | ✗ |
 | Settings (AC/n8n config) | ✓ | ✗ |
+
+### Frontend component strategy
+
+All pages **reuse** shared components instead of one-off markup. This keeps the admin UI consistent and reduces duplication.
+
+#### Folder layout
+
+```text
+client/src/
+  components/
+    ui/           # Primitives: Button, Input, Card, Modal, DataTable, …
+    layout/       # App shell: AppLayout
+    routing/      # Route guards: ProtectedRoute, SuperAdminRoute
+    domain/       # Shared feature UI used across pages (e.g. ReportRunTable)
+    common/       # Cross-cutting UI: icons, ThemeToggle
+  pages/
+    <page-name>/          # One folder per route area
+      <PageName>Page.tsx  # Page entry — routing, data fetching, composition
+      components/         # UI used only on this page
+      hooks/              # Hooks used only on this page
+  hooks/                  # Shared hooks (e.g. useDebouncedValue)
+```
+
+| Layer | Location | Purpose |
+|-------|----------|---------|
+| **UI primitives** | `client/src/components/ui/` | Reusable building blocks: `Button`, `Input`, `Select`, `Textarea`, `Card`, `Badge`, `Avatar`, `Modal`, `PageHeader`, `DataTable` |
+| **Layout** | `client/src/components/layout/` | App shell: `AppLayout` |
+| **Routing** | `client/src/components/routing/` | Route guards: `ProtectedRoute`, `SuperAdminRoute` |
+| **Domain composites** | `client/src/components/domain/` | Feature-specific but shared across pages (e.g. `ReportRunTable`) |
+| **Common** | `client/src/components/common/` | Icons, theme toggle, and other cross-cutting UI |
+| **Pages** | `client/src/pages/<page-name>/` | Compose primitives + layout; hold data fetching and page logic only |
+| **Page components** | `client/src/pages/<page-name>/components/` | Modals, forms, and sections used only on that page |
+| **Page hooks** | `client/src/pages/<page-name>/hooks/` | Custom hooks scoped to a single page |
+
+**Rules when building UI**
+
+1. **Check existing components first** — search `components/ui/`, `components/domain/`, and sibling pages before writing new markup.
+2. **Reuse or extend** — compose shared primitives; add variants or `className` rather than copying Tailwind into pages.
+3. **Create shared components** — add to `components/ui/` (generic) or `components/domain/` (feature-specific, 2+ pages) only when reuse is clear.
+4. **Keep pages thin** — extract page-only UI into `pages/<name>/components/`; extract page-only hooks into `pages/<name>/hooks/`.
+5. **Icons** — import from `client/src/components/common/icons.tsx`; don't inline SVGs in pages.
+
+**Standard page structure**
+
+```tsx
+// pages/projects/ProjectsPage.tsx
+import { AppLayout } from '../../components/layout/AppLayout';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { CreateProjectModal } from './components/CreateProjectModal';
+
+export function ProjectsPage() {
+  return (
+    <AppLayout>
+      <PageHeader title="…" description="…" action={<Button>…</Button>} />
+      <Card>…</Card>
+    </AppLayout>
+  );
+}
+```
 
 ---
 
@@ -609,6 +668,8 @@ With an existing n8n workflow and AC access, Phase 3 is often the fastest if the
 ## Implementation notes (repo structure)
 
 The codebase uses `client/` and `server/` instead of the `apps/web` + `apps/api` monorepo layout described in Step 2. Prisma schema and migrations live in `server/prisma/`.
+
+**Frontend:** Shared components live under `client/src/components/` (typed subfolders: `ui/`, `layout/`, `routing/`, `domain/`, `common/`). Each page has its own folder under `client/src/pages/<name>/` with `components/` and `hooks/` subfolders — see §6 *Frontend component strategy*. Cursor rules in `.cursor/rules/reuse-components.mdc` enforce this for AI-assisted development.
 
 ---
 

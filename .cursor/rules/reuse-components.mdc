@@ -1,0 +1,119 @@
+---
+description: Reuse shared UI components and follow frontend folder conventions in Brieflane
+globs: client/src/**/*.{tsx,ts}
+alwaysApply: false
+---
+
+# Reuse Components & Folder Conventions
+
+Brieflane pages compose shared components from typed folders under `client/src/components/`. Do not duplicate primitives inline.
+
+## Component layers
+
+| Layer | Path | Use for |
+|-------|------|---------|
+| UI primitives | `client/src/components/ui/` | `Button`, `Input`, `Select`, `Textarea`, `Card`, `Badge`, `Avatar`, `Modal`, `PageHeader`, `DataTable` |
+| Layout | `client/src/components/layout/` | `AppLayout` |
+| Routing guards | `client/src/components/routing/` | `ProtectedRoute`, `SuperAdminRoute` |
+| Domain composites | `client/src/components/domain/` | Shared feature UI used on 2+ pages (e.g. `ReportRunTable`) |
+| Common | `client/src/components/common/` | `icons`, `ThemeToggle` |
+| Page entry | `client/src/pages/<name>/<Name>Page.tsx` | One route entry per file — data fetching, routing, column definitions |
+| Page components | `client/src/pages/<name>/components/` | React UI only: modals, forms, sections used on that page |
+| Page utils | `client/src/pages/<name>/utils/` | Pure helpers: formatters, mappers, validators, sorters |
+| Page types | `client/src/pages/<name>/types/` | Types/interfaces scoped to one page area |
+| Page constants | `client/src/pages/<name>/constants/` | Static config and lookup data for one page area |
+| Page hooks | `client/src/pages/<name>/hooks/` | Hooks scoped to a single page |
+| Shared hooks | `client/src/hooks/` | Hooks used across pages or shared components |
+
+## Before writing new UI
+
+1. Check `client/src/components/ui/` for an existing primitive.
+2. Check `client/src/components/domain/` for a shared feature component.
+3. Check sibling pages (e.g. `pages/users/`, `pages/projects/`) for the same pattern.
+4. Extend via props, variants, or `className` — don't copy Tailwind blocks into pages.
+5. **Reuse first, create second:**
+   - Generic + reusable in 2+ places → `components/ui/` or `components/domain/`
+   - React UI used on one page only → `pages/<name>/components/`
+   - Non-UI logic used on one page only → `pages/<name>/utils/`, `types/`, or `constants/`
+6. Add a new file under `ui/` only when the pattern is generic and reused (or will be) in 2+ places.
+
+## Adding a new page
+
+```text
+client/src/pages/<page-name>/
+  <PageName>Page.tsx       # one file per route entry (UsersPage, CreateUserPage, …)
+  components/              # React UI only (modals, sections, forms)
+  utils/                   # pure helpers (add when needed)
+  types/                   # page-local types (add when needed)
+  constants/               # page-local static data (add when needed)
+  hooks/                   # page-only hooks (add .gitkeep if empty)
+```
+
+- **Page folder root** — only `*Page.tsx` route entries. One route = one page file.
+- **Never** put forms, modals, sections, helpers, types, or constants at the page folder root.
+- **`components/` is for React UI only.** Do not put formatters, validators, mappers, or form-state types there.
+- Put helpers in `utils/`, types in `types/`, static lists/config in `constants/`.
+
+Register routes in `client/src/App.tsx`. Import shared layout from `components/layout/AppLayout`.
+
+## Page conventions
+
+- Wrap authenticated pages in `AppLayout` from `components/layout/`.
+- Use `PageHeader` for title, description, and primary action.
+- Use `DataTable` for sortable, searchable, paginated lists.
+- Use `Modal` for confirmations and create/edit dialogs.
+- Use `Input` / `Select` / `Textarea` for form fields; `Button` for actions.
+- Import icons from `client/src/components/common/icons.tsx`.
+
+## Examples
+
+```tsx
+// ❌ BAD — raw button styles in a page
+<button className="h-10 rounded-xl bg-emerald-600 px-4 text-white">Save</button>
+
+// ✅ GOOD
+import { Button } from '../../components/ui/Button';
+<Button type="submit">Save</Button>
+```
+
+```tsx
+// ❌ BAD — 100-line modal defined inline in the page file
+function CreateProjectModal() { /* … */ }
+
+// ✅ GOOD — extract to pages/projects/components/CreateProjectModal.tsx
+import { CreateProjectModal } from './components/CreateProjectModal';
+```
+
+```tsx
+// ❌ BAD — form/wrapper component at page folder root
+// pages/users/UserFormPage.tsx exporting CreateUserPage + EditUserPage
+
+// ✅ GOOD — one route entry per *Page.tsx; form in components/
+// pages/users/CreateUserPage.tsx  →  import { UserForm } from './components/UserForm'
+// pages/users/EditUserPage.tsx    →  import { UserForm } from './components/UserForm'
+// pages/users/components/UserForm.tsx
+```
+
+```tsx
+// ❌ BAD — helpers/types mixed into components/ or page root
+// pages/projects/utils.ts
+// pages/projects/projectDetailUtils.ts
+// type CreateFormState inside CreateProjectModal.tsx
+
+// ✅ GOOD — split by responsibility
+// pages/projects/utils/projects.ts
+// pages/projects/utils/projectDetail.ts
+// pages/projects/utils/createProjectForm.ts
+// pages/projects/types/projectDetail.ts
+// pages/projects/types/createProjectForm.ts
+// pages/projects/components/CreateProjectModal.tsx
+```
+
+```tsx
+// ❌ BAD — custom table markup for a list page
+<table className="w-full">…</table>
+
+// ✅ GOOD
+import { DataTable, type DataTableColumn } from '../../components/ui/DataTable';
+<DataTable columns={columns} rows={rows} … />
+```

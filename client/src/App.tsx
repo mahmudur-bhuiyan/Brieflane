@@ -1,13 +1,14 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { LoginPage } from './pages/LoginPage';
-import { ProtectedRoute } from './components/ProtectedRoute';
-import { SuperAdminRoute } from './components/SuperAdminRoute';
-import { DashboardPage } from './pages/DashboardPage';
-import { ProjectsPage } from './pages/ProjectsPage';
-import { ProfilePage } from './pages/ProfilePage';
-import { ProjectDetailPage } from './pages/ProjectDetailPage';
-import { UsersPage } from './pages/UsersPage';
-import { CreateUserPage, EditUserPage } from './pages/UserFormPage';
+import { LoginPage } from './pages/login/LoginPage';
+import { ProtectedRoute } from './components/routing/ProtectedRoute';
+import { SuperAdminRoute } from './components/routing/SuperAdminRoute';
+import { DashboardPage } from './pages/dashboard/DashboardPage';
+import { ProjectsPage } from './pages/projects/ProjectsPage';
+import { ProfilePage } from './pages/profile/ProfilePage';
+import { ProjectDetailPage } from './pages/projects/ProjectDetailPage';
+import { UsersPage } from './pages/users/UsersPage';
+import { CreateUserPage } from './pages/users/CreateUserPage';
+import { EditUserPage } from './pages/users/EditUserPage';
 
 function App() {
   return (

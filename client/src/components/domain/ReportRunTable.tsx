@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom';
-import { Badge } from './ui/Badge';
+import { Badge } from '../ui/Badge';
 import type {
   ReportRunListRecord,
   ReportRunStatus,
   ReportRunSummary,
-} from '../types/report';
+} from '../../types/report';
 
 function statusVariant(status: ReportRunStatus): 'success' | 'warning' | 'accent' | 'neutral' {
   switch (status) {

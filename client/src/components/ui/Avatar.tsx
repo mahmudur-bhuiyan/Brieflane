@@ -24,7 +24,7 @@ export function Avatar({
 
   return (
     <div
-      className={`grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-emerald-500/30 to-indigo-500/30 font-semibold text-white ${sizeClasses} ${className}`}
+      className={`grid shrink-0 place-items-center rounded-full bg-linear-to-br from-emerald-500/30 to-indigo-500/30 font-semibold text-white ${sizeClasses} ${className}`}
     >
       <span className="block leading-none">{initials || '?'}</span>
     </div>

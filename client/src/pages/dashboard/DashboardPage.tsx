@@ -1,38 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AppLayout } from '../components/AppLayout';
-import { ReportRunSummaryCards, ReportRunTable } from '../components/ReportRunTable';
-import { IconFileText, IconFolder, IconSparkles, IconUsers } from '../components/icons';
-import { Badge } from '../components/ui/Badge';
-import { Card } from '../components/ui/Card';
-import { PageHeader } from '../components/ui/PageHeader';
-import { useAuth } from '../context/AuthContext';
-import { useDashboardQuery } from '../lib/queries/dashboard';
-import { formatRole, isSuperAdmin } from '../lib/roles';
-
-const quickLinks = [
-  {
-    title: 'Projects',
-    description: 'Sync from ActiveCollab and manage client details.',
-    icon: IconFolder,
-    status: 'Available now',
-    to: '/projects',
-  },
-  {
-    title: 'Reports',
-    description: 'View report run history on the dashboard below.',
-    icon: IconFileText,
-    status: 'Available now',
-  },
-  {
-    title: 'Users',
-    description: 'Invite Project Managers and manage access.',
-    icon: IconUsers,
-    status: 'Available now',
-    adminOnly: true,
-    to: '/users',
-  },
-];
+import { AppLayout } from '../../components/layout/AppLayout';
+import { ReportRunSummaryCards, ReportRunTable } from '../../components/domain/ReportRunTable';
+import { IconFileText, IconSparkles } from '../../components/common/icons';
+import { Badge } from '../../components/ui/Badge';
+import { Card } from '../../components/ui/Card';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { useAuth } from '../../context/AuthContext';
+import { useDashboardQuery } from '../../lib/queries/dashboard';
+import { formatRole, isSuperAdmin } from '../../lib/roles';
+import { quickLinks } from './constants/quickLinks';
 
 export function DashboardPage() {
   const { user } = useAuth();

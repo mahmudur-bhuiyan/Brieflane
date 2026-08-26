@@ -5,6 +5,8 @@ import type {
   CreateProjectInput,
   ProjectResponse,
   ProjectsListResponse,
+  SearchAcProjectsInput,
+  SearchAcProjectsResponse,
   SyncProjectsResponse,
   UpdateProjectInput,
 } from '../../types/project';
@@ -90,6 +92,16 @@ export function useSyncProjectsMutation() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
     },
+  });
+}
+
+export function useSearchAcProjectsMutation() {
+  return useMutation({
+    mutationFn: (payload: SearchAcProjectsInput) =>
+      apiFetch<SearchAcProjectsResponse>('/api/projects/ac-search', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
   });
 }
 

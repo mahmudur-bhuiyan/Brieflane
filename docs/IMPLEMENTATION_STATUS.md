@@ -48,7 +48,7 @@ brieflane/
   docs/
 ```
 
-**Deviations from original plan:** no root monorepo `package.json`; Prisma lives under `server/`; client uses React Query and a theme toggle (not in original plan).
+**Deviations from original plan:** no root monorepo `package.json`; Prisma lives under `server/`; client uses React Query and a theme toggle (not in original plan); UI is a custom shared component library organized by type under `client/src/components/` (`ui/`, `layout/`, `routing/`, `domain/`, `common/`) with per-page folders under `client/src/pages/<name>/` — see PROJECT_PLAN §6 *Frontend component strategy*.
 
 ---
 

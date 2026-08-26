@@ -6,3 +6,9 @@ export const activeCollabCredentialsSchema = z.object({
 });
 
 export type ActiveCollabCredentials = z.infer<typeof activeCollabCredentialsSchema>;
+
+export const activeCollabProjectSearchSchema = activeCollabCredentialsSchema.extend({
+  projectName: z.string().trim().min(2, 'Enter at least 2 characters to search'),
+});
+
+export type ActiveCollabProjectSearchInput = z.infer<typeof activeCollabProjectSearchSchema>;

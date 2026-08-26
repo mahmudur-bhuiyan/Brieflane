@@ -1,6 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { isSuperAdmin } from '../lib/roles';
+import { useAuth } from '../../context/AuthContext';
+import { isSuperAdmin } from '../../lib/roles';
 
 export function SuperAdminRoute() {
   const { user, loading } = useAuth();

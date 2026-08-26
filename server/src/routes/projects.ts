@@ -7,7 +7,11 @@ import {
   createActiveCollabService,
   isActiveCollabError,
 } from '../lib/activecollab/client.js';
-import { activeCollabCredentialsSchema } from '../schemas/activecollab.js';
+import {
+  activeCollabCredentialsSchema,
+  activeCollabProjectSearchSchema,
+} from '../schemas/activecollab.js';
+import { searchActiveCollabProjects } from '../lib/activecollab/proxy.js';
 import { isN8nError, requireN8nReportService } from '../lib/n8n/client.js';
 import { buildN8nWebhookPayload } from '../lib/reports.js';
 import { prisma } from '../lib/prisma.js';
@@ -130,6 +134,29 @@ projectsRouter.post('/sync', async (req, res) => {
       created,
       updated,
     });
+  } catch (error) {
+    handleActiveCollabError(error, res);
+  }
+});
+
+projectsRouter.post('/ac-search', async (req, res) => {
+  const parsed = activeCollabProjectSearchSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten().fieldErrors });
+    return;
+  }
+
+  try {
+    const projects = await searchActiveCollabProjects(
+      {
+        username: parsed.data.username,
+        password: parsed.data.password,
+      },
+      parsed.data.projectName,
+    );
+
+    res.json({ projects, count: projects.length });
   } catch (error) {
     handleActiveCollabError(error, res);
   }

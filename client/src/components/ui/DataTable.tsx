@@ -4,7 +4,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconChevronUp,
-} from '../icons';
+} from '../common/icons';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import {
   DEFAULT_PAGE_SIZE,
@@ -228,7 +228,7 @@ export function DataTable<T>({
 
           <div className={`table-scroll ${renderMobileRow ? 'hidden lg:block' : 'block'}`}>
             <table
-              className={`min-w-[720px] w-full text-sm ${hasColumnWidths ? 'table-fixed' : ''}`}
+              className={`min-w-180 w-full text-sm ${hasColumnWidths ? 'table-fixed' : ''}`}
             >
               {hasColumnWidths && (
                 <colgroup>

@@ -34,6 +34,20 @@ export type ActiveCollabCredentials = {
   password: string;
 };
 
+export type AcProjectSearchResult = {
+  id: number;
+  name: string;
+};
+
+export type SearchAcProjectsInput = ActiveCollabCredentials & {
+  projectName: string;
+};
+
+export type SearchAcProjectsResponse = {
+  projects: AcProjectSearchResult[];
+  count: number;
+};
+
 export type CreateProjectInput = {
   acProjectId: number;
   name: string;
