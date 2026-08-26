@@ -1,33 +1,51 @@
-import { useCallback, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { AppLayout } from '../../components/layout/AppLayout';
 import { IconPlus, IconRefresh, IconSearch } from '../../components/common/icons';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { DataTable, type DataTableColumn } from '../../components/ui/DataTable';
 import { PageHeader } from '../../components/ui/PageHeader';
-import { getApiErrorMessage, useProjectsQuery } from '../../lib/queries/projects';
+import { useAuth } from '../../context/AuthContext';
+import {
+  getApiErrorMessage,
+  useArchiveProjectMutation,
+  useProjectsQuery,
+} from '../../lib/queries/projects';
+import { isSuperAdmin } from '../../lib/roles';
 import { DEFAULT_PAGE_SIZE, type PageSize, type SortOrder } from '../../types/pagination';
 import type { ProjectRecord } from '../../types/project';
-import { CreateProjectModal } from './components/CreateProjectModal';
-import { SearchActiveCollabModal } from './components/SearchActiveCollabModal';
 import { SyncActiveCollabModal } from './components/SyncActiveCollabModal';
 import { formatSyncedAt, sortProjects } from './utils/projects';
 
 export function ProjectsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
+  const archiveProject = useArchiveProjectMutation();
+  const superAdmin = isSuperAdmin(user?.role);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>(DEFAULT_PAGE_SIZE);
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
   const [showSync, setShowSync] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [projectToDelete, setProjectToDelete] = useState<ProjectRecord | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const { data, isPending, isError, error } = useProjectsQuery(search);
+
+  useEffect(() => {
+    const message = (location.state as { message?: string } | null)?.message;
+    if (message) {
+      setSyncMessage(message);
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.pathname, location.state, navigate]);
 
   const projects = data?.projects ?? [];
   const loadError = isError
@@ -62,10 +80,30 @@ export function ProjectsPage() {
 
   function handleOpenSync() {
     setSyncMessage(null);
+    setActionError(null);
     setShowSync(true);
   }
 
-  const columns: DataTableColumn<ProjectRecord>[] = [
+  const handleDeleteProject = useCallback(
+    async (project: ProjectRecord) => {
+      setActionError(null);
+      setDeletingId(project.id);
+
+      try {
+        await archiveProject.mutateAsync(project.id);
+        setProjectToDelete(null);
+        setSyncMessage(`Deleted "${project.name}".`);
+      } catch (err) {
+        setActionError(getApiErrorMessage(err, 'Failed to delete project'));
+      } finally {
+        setDeletingId(null);
+      }
+    },
+    [archiveProject],
+  );
+
+  const columns: DataTableColumn<ProjectRecord>[] = useMemo(
+    () => [
     {
       id: 'name',
       header: 'Name',
@@ -115,16 +153,30 @@ export function ProjectsPage() {
       header: 'Actions',
       width: 15,
       cell: (project) => (
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => navigate(`/projects/${project.id}`)}
-        >
-          Edit
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate(`/projects/${project.id}`)}
+          >
+            Edit
+          </Button>
+          {superAdmin ? (
+            <Button
+              variant="danger"
+              size="sm"
+              disabled={deletingId === project.id}
+              onClick={() => setProjectToDelete(project)}
+            >
+              {deletingId === project.id ? 'Deleting…' : 'Delete'}
+            </Button>
+          ) : null}
+        </div>
       ),
     },
-  ];
+  ],
+    [deletingId, navigate, superAdmin],
+  );
 
   return (
     <AppLayout title="Projects" description="Sync from ActiveCollab and manage client details">
@@ -135,21 +187,13 @@ export function ProjectsPage() {
           <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap md:w-auto">
             <Button
               variant="secondary"
-              onClick={() => setShowSearch(true)}
+              onClick={() => navigate('/projects/search')}
               className="w-full sm:w-auto"
             >
               <IconSearch width={16} height={16} />
               Search AC
             </Button>
-            <Button
-              variant="secondary"
-              onClick={handleOpenSync}
-              className="w-full sm:w-auto"
-            >
-              <IconRefresh width={16} height={16} />
-              Sync from AC
-            </Button>
-            <Button onClick={() => setShowCreate(true)} className="w-full sm:w-auto">
+            <Button onClick={() => navigate('/projects/new')} className="w-full sm:w-auto">
               <IconPlus width={16} height={16} />
               Add project
             </Button>
@@ -159,6 +203,10 @@ export function ProjectsPage() {
 
       {syncMessage && (
         <p className="mb-4 text-sm text-emerald-400">{syncMessage}</p>
+      )}
+
+      {actionError && (
+        <p className="mb-4 text-sm text-red-400">{actionError}</p>
       )}
 
       <Card padding={false}>
@@ -192,7 +240,7 @@ export function ProjectsPage() {
                   <IconRefresh width={16} height={16} />
                   Sync from AC
                 </Button>
-                <Button onClick={() => setShowCreate(true)}>
+                <Button onClick={() => navigate('/projects/new')}>
                   <IconPlus width={16} height={16} />
                   Add project
                 </Button>
@@ -221,37 +269,51 @@ export function ProjectsPage() {
               <p className="mt-1 text-xs text-faint">
                 {formatSyncedAt(project.lastSyncedAt)}
               </p>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="mt-4 w-full"
-                onClick={() => navigate(`/projects/${project.id}`)}
-              >
-                Edit project
-              </Button>
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full sm:flex-1"
+                  onClick={() => navigate(`/projects/${project.id}`)}
+                >
+                  Edit project
+                </Button>
+                {superAdmin ? (
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    className="w-full sm:flex-1"
+                    disabled={deletingId === project.id}
+                    onClick={() => setProjectToDelete(project)}
+                  >
+                    {deletingId === project.id ? 'Deleting…' : 'Delete'}
+                  </Button>
+                ) : null}
+              </div>
             </div>
           )}
         />
       </Card>
 
-      {showSearch && (
-        <SearchActiveCollabModal
-          onClose={() => setShowSearch(false)}
-          onProjectAdded={(message) => setSyncMessage(message)}
-        />
-      )}
-
-      {showCreate && (
-        <CreateProjectModal
-          onClose={() => setShowCreate(false)}
-          onSaved={() => setShowCreate(false)}
-        />
-      )}
-
       {showSync && (
         <SyncActiveCollabModal
           onClose={() => setShowSync(false)}
           onSynced={(message) => setSyncMessage(message)}
+        />
+      )}
+
+      {projectToDelete && (
+        <ConfirmModal
+          title="Delete project"
+          description={`Delete "${projectToDelete.name}"? It will be removed from the project list.`}
+          confirmLabel="Delete"
+          isPending={deletingId === projectToDelete.id}
+          onClose={() => {
+            if (deletingId !== projectToDelete.id) {
+              setProjectToDelete(null);
+            }
+          }}
+          onConfirm={() => void handleDeleteProject(projectToDelete)}
         />
       )}
     </AppLayout>

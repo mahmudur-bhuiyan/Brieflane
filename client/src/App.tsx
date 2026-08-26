@@ -6,6 +6,8 @@ import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { ProjectsPage } from './pages/projects/ProjectsPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
 import { ProjectDetailPage } from './pages/projects/ProjectDetailPage';
+import { SearchActiveCollabPage } from './pages/projects/SearchActiveCollabPage';
+import { CreateProjectPage } from './pages/projects/CreateProjectPage';
 import { UsersPage } from './pages/users/UsersPage';
 import { CreateUserPage } from './pages/users/CreateUserPage';
 import { EditUserPage } from './pages/users/EditUserPage';
@@ -18,6 +20,8 @@ function App() {
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/projects" element={<ProjectsPage />} />
+        <Route path="/projects/search" element={<SearchActiveCollabPage />} />
+        <Route path="/projects/new" element={<CreateProjectPage />} />
         <Route path="/projects/:id" element={<ProjectDetailPage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Route>
