@@ -139,3 +139,79 @@ export async function searchActiveCollabProjects(
     clearTimeout(timeout);
   }
 }
+
+export async function fetchAcProjectUserTaskHours(
+  credentials: ActiveCollabCredentials,
+  params: { projectId: number; startDate: string; endDate: string },
+): Promise<unknown> {
+  const baseUrl = process.env.ACTIVECOLLAB_BASE_URL?.trim();
+
+  if (!baseUrl) {
+    throw new ActiveCollabError(
+      'ActiveCollab is not configured. Set ACTIVECOLLAB_BASE_URL.',
+      undefined,
+      'config',
+    );
+  }
+
+  const url = `${getApiRoot(baseUrl)}/ac-project-user-task-hours`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: basicAuthHeader(credentials),
+      },
+      body: JSON.stringify({
+        project_id: params.projectId,
+        start_date: params.startDate,
+        end_date: params.endDate,
+      }),
+      signal: controller.signal,
+    });
+
+    const body = await response.json().catch(() => ({}));
+
+    if (response.status === 401 || response.status === 403) {
+      throw new ActiveCollabError(
+        'ActiveCollab authentication failed. Check your credentials.',
+        response.status,
+        'auth',
+      );
+    }
+
+    if (!response.ok) {
+      const message =
+        typeof body === 'object' &&
+        body !== null &&
+        'message' in body &&
+        typeof (body as { message: unknown }).message === 'string'
+          ? (body as { message: string }).message
+          : 'ActiveCollab task hours request failed';
+
+      throw new ActiveCollabError(message, response.status, 'api');
+    }
+
+    return body;
+  } catch (error) {
+    if (error instanceof ActiveCollabError) {
+      throw error;
+    }
+
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new ActiveCollabError('ActiveCollab request timed out', undefined, 'timeout');
+    }
+
+    throw new ActiveCollabError(
+      error instanceof Error ? error.message : 'ActiveCollab task hours request failed',
+      undefined,
+      'api',
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
+}

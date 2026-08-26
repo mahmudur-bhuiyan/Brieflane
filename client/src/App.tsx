@@ -7,6 +7,8 @@ import { ProjectsPage } from './pages/projects/ProjectsPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
 import { ProjectDetailPage } from './pages/projects/ProjectDetailPage';
 import { SearchActiveCollabPage } from './pages/projects/SearchActiveCollabPage';
+import { ProjectTaskHoursReportPage } from './pages/projects/ProjectTaskHoursReportPage';
+import { ProjectUserTaskHoursPage } from './pages/projects/ProjectUserTaskHoursPage';
 import { CreateProjectPage } from './pages/projects/CreateProjectPage';
 import { UsersPage } from './pages/users/UsersPage';
 import { CreateUserPage } from './pages/users/CreateUserPage';
@@ -22,6 +24,8 @@ function App() {
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/projects/search" element={<SearchActiveCollabPage />} />
         <Route path="/projects/new" element={<CreateProjectPage />} />
+        <Route path="/projects/:id/task-hours/report" element={<ProjectTaskHoursReportPage />} />
+        <Route path="/projects/:id/task-hours" element={<ProjectUserTaskHoursPage />} />
         <Route path="/projects/:id" element={<ProjectDetailPage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Route>

@@ -1,4 +1,4 @@
-import { IconFileText, IconFolder, IconUsers } from '../../../components/common/icons';
+import { IconFolder, IconUsers } from '../../../components/common/icons';
 
 export const quickLinks = [
   {
@@ -7,12 +7,6 @@ export const quickLinks = [
     icon: IconFolder,
     status: 'Available now',
     to: '/projects',
-  },
-  {
-    title: 'Reports',
-    description: 'View report run history on the dashboard below.',
-    icon: IconFileText,
-    status: 'Available now',
   },
   {
     title: 'Users',

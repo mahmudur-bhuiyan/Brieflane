@@ -21,6 +21,8 @@ export type ProjectsListResponse = {
 
 export type ProjectResponse = {
   project: ProjectRecord;
+  created?: boolean;
+  assigned?: boolean;
 };
 
 export type SyncProjectsResponse = {
@@ -67,13 +69,35 @@ export type AcProjectSearchResult = {
   name: string;
 };
 
-export type SearchAcProjectsInput = ActiveCollabCredentials & {
-  projectName: string;
-};
+export type SearchAcProjectsInput =
+  | {
+      useSavedCredentials: true;
+      projectName: string;
+    }
+  | (ActiveCollabCredentials & {
+      projectName: string;
+    });
 
 export type SearchAcProjectsResponse = {
   projects: AcProjectSearchResult[];
   count: number;
+};
+
+export type FetchAcTaskHoursInput =
+  | {
+      useSavedCredentials: true;
+      projectId: number;
+      startDate: string;
+      endDate: string;
+    }
+  | (ActiveCollabCredentials & {
+      projectId: number;
+      startDate: string;
+      endDate: string;
+    });
+
+export type FetchAcTaskHoursResponse = {
+  data: unknown;
 };
 
 export type CreateProjectInput = {

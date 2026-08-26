@@ -1,6 +1,7 @@
 export const queryKeys = {
   auth: {
     me: ['auth', 'me'] as const,
+    activeCollabCredentials: ['auth', 'activeCollabCredentials'] as const,
   },
   dashboard: {
     all: ['dashboard'] as const,

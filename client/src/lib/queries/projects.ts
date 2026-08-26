@@ -3,6 +3,8 @@ import { ApiError, apiFetch } from '../api';
 import type {
   ActiveCollabCredentials,
   CreateProjectInput,
+  FetchAcTaskHoursInput,
+  FetchAcTaskHoursResponse,
   ProjectResponse,
   ProjectsListResponse,
   SearchAcProjectsInput,
@@ -118,6 +120,16 @@ export function useSearchAcProjectsMutation() {
   return useMutation({
     mutationFn: (payload: SearchAcProjectsInput) =>
       apiFetch<SearchAcProjectsResponse>('/api/projects/ac-search', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+  });
+}
+
+export function useFetchAcTaskHoursMutation() {
+  return useMutation({
+    mutationFn: (payload: FetchAcTaskHoursInput) =>
+      apiFetch<FetchAcTaskHoursResponse>('/api/projects/ac-task-hours', {
         method: 'POST',
         body: JSON.stringify(payload),
       }),

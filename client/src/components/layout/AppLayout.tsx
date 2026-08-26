@@ -3,7 +3,6 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { APP_NAME } from '../../constants';
 import { useAuth } from '../../context/AuthContext';
 import {
-  IconFileText,
   IconFolder,
   IconLayoutDashboard,
   IconLogOut,
@@ -36,6 +35,7 @@ const navItems: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: <IconLayoutDashboard />, end: true },
   { to: '/users', label: 'Users', icon: <IconUsers />, adminOnly: true },
   { to: '/projects', label: 'Projects', icon: <IconFolder /> },
+  { to: '/profile', label: 'Profile', icon: <IconUser /> },
 ];
 
 function BrandMark() {
@@ -93,14 +93,6 @@ function SidebarNav({
         {visibleNav.map((item) => (
           <NavItemLink key={item.to} item={item} onNavigate={onNavigate} />
         ))}
-
-        <p className="mb-2 mt-6 px-3 text-[11px] font-semibold uppercase tracking-wider text-faint">
-          Coming soon
-        </p>
-        <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-disabled">
-          <IconFileText className="opacity-50" />
-          Reports
-        </div>
       </nav>
 
       <div className="border-t border-subtle p-4">

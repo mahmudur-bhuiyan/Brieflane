@@ -8,15 +8,23 @@ export function Modal({
   children,
   onClose,
   size = 'md',
+  closeAction = 'icon',
 }: {
   title: string;
   description?: string;
   children: ReactNode;
   onClose: () => void;
-  size?: 'md' | 'lg' | 'xl';
+  size?: 'md' | 'lg' | 'xl' | '2xl';
+  closeAction?: 'icon' | 'button';
 }) {
   const sizeClass =
-    size === 'xl' ? 'max-w-4xl' : size === 'lg' ? 'max-w-2xl' : 'max-w-md';
+    size === '2xl'
+      ? 'max-w-6xl'
+      : size === 'xl'
+        ? 'max-w-4xl'
+        : size === 'lg'
+          ? 'max-w-2xl'
+          : 'max-w-md';
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
@@ -34,9 +42,15 @@ export function Modal({
             <h2 className="text-lg font-semibold text-heading">{title}</h2>
             {description && <p className="mt-1 text-sm text-muted">{description}</p>}
           </div>
-          <Button variant="ghost" size="sm" type="button" onClick={onClose} aria-label="Close">
-            <IconX width={16} height={16} />
-          </Button>
+          {closeAction === 'button' ? (
+            <Button variant="secondary" size="sm" type="button" onClick={onClose}>
+              Close
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" type="button" onClick={onClose} aria-label="Close">
+              <IconX width={16} height={16} />
+            </Button>
+          )}
         </div>
         {children}
       </div>

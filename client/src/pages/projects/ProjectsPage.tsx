@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '../../lib/toast';
 import { AppLayout } from '../../components/layout/AppLayout';
-import { IconPlus, IconRefresh, IconSearch } from '../../components/common/icons';
+import { IconFileText, IconPencil, IconPlus, IconRefresh, IconSearch, IconTrash } from '../../components/common/icons';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -167,6 +167,14 @@ export function ProjectsPage() {
             <Button
               variant="secondary"
               size="sm"
+              onClick={() => navigate(`/projects/${project.id}/task-hours`)}
+            >
+              <IconFileText width={14} height={14} />
+              Task hours
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => {
                 setActionError(null);
                 setProjectToSync(project);
@@ -180,6 +188,7 @@ export function ProjectsPage() {
               size="sm"
               onClick={() => navigate(`/projects/${project.id}`)}
             >
+              <IconPencil width={14} height={14} />
               Edit
             </Button>
             {superAdmin ? (
@@ -189,6 +198,7 @@ export function ProjectsPage() {
                 disabled={deletingId === project.id}
                 onClick={() => setProjectToDelete(project)}
               >
+                <IconTrash width={14} height={14} />
                 {deletingId === project.id ? 'Deleting…' : 'Delete'}
               </Button>
             ) : null}
@@ -251,11 +261,11 @@ export function ProjectsPage() {
           emptyAction={
             !search.trim() ? (
               <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
-                <Button variant="secondary" onClick={handleOpenSync}>
+                <Button variant="secondary" onClick={handleOpenSync} className="w-full sm:w-auto">
                   <IconRefresh width={16} height={16} />
                   Sync from AC
                 </Button>
-                <Button onClick={() => navigate('/projects/new')}>
+                <Button onClick={() => navigate('/projects/new')} className="w-full sm:w-auto">
                   <IconPlus width={16} height={16} />
                   Add project
                 </Button>
@@ -299,6 +309,15 @@ export function ProjectsPage() {
                   variant="secondary"
                   size="sm"
                   className="w-full sm:flex-1"
+                  onClick={() => navigate(`/projects/${project.id}/task-hours`)}
+                >
+                  <IconFileText width={14} height={14} />
+                  Task hours
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full sm:flex-1"
                   onClick={() => {
                     setActionError(null);
                     setProjectToSync(project);
@@ -313,6 +332,7 @@ export function ProjectsPage() {
                   className="w-full sm:flex-1"
                   onClick={() => navigate(`/projects/${project.id}`)}
                 >
+                  <IconPencil width={14} height={14} />
                   Edit project
                 </Button>
                 {superAdmin ? (
@@ -323,6 +343,7 @@ export function ProjectsPage() {
                     disabled={deletingId === project.id}
                     onClick={() => setProjectToDelete(project)}
                   >
+                    <IconTrash width={14} height={14} />
                     {deletingId === project.id ? 'Deleting…' : 'Delete'}
                   </Button>
                 ) : null}
