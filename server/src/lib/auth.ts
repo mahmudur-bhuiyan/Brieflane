@@ -44,12 +44,14 @@ export function toAuthUser(user: {
   id: string;
   email: string;
   name: string | null;
+  designation?: string | null;
   role: AuthUser['role'];
 }): AuthUser {
   return {
     id: user.id,
     email: user.email,
     name: user.name,
+    designation: user.designation ?? null,
     role: user.role,
   };
 }

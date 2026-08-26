@@ -16,7 +16,7 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     const payload = verifyToken(token);
     const user = await prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, email: true, name: true, role: true, status: true },
+      select: { id: true, email: true, name: true, designation: true, role: true, status: true },
     });
 
     if (!user || user.status !== 'ACTIVE') {

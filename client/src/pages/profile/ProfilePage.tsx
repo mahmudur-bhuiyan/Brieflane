@@ -105,6 +105,11 @@ export function ProfilePage() {
               value={user.name || 'No name set'}
             />
             <ProfileField
+              icon={<IconShield width={16} height={16} />}
+              label="Designation"
+              value={user.designation || 'No designation set'}
+            />
+            <ProfileField
               icon={<IconMail width={16} height={16} />}
               label="Email address"
               value={user.email}

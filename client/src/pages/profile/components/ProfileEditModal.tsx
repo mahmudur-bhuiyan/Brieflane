@@ -38,11 +38,16 @@ export function ProfileEditModal({ user, onClose }: { user: AuthUser; onClose: (
     }
 
     const trimmedName = form.name.trim();
+    const trimmedDesignation = form.designation.trim();
     const nameChanged = trimmedName !== (user.name ?? '');
+    const designationChanged = (trimmedDesignation || null) !== (user.designation ?? null);
 
     try {
-      if (nameChanged) {
-        await updateProfile.mutateAsync({ name: trimmedName });
+      if (nameChanged || designationChanged) {
+        await updateProfile.mutateAsync({
+          name: trimmedName,
+          designation: trimmedDesignation || null,
+        });
       }
 
       if (changingPassword) {
@@ -62,7 +67,7 @@ export function ProfileEditModal({ user, onClose }: { user: AuthUser; onClose: (
   return (
     <Modal
       title="Edit profile"
-      description="Update your display name or password. Email cannot be changed."
+      description="Update your display name, designation, or password. Email cannot be changed."
       onClose={onClose}
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
@@ -74,6 +79,14 @@ export function ProfileEditModal({ user, onClose }: { user: AuthUser; onClose: (
           autoComplete="name"
           maxLength={120}
           required
+        />
+
+        <Input
+          label="Designation"
+          placeholder="e.g. Project Manager"
+          value={form.designation}
+          onChange={(event) => setForm((prev) => ({ ...prev, designation: event.target.value }))}
+          maxLength={120}
         />
 
         <div className="rounded-xl bg-subtle px-4 py-3 ring-1 ring-(--border)">

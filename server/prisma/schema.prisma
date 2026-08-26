@@ -36,6 +36,7 @@ model User {
   email               String     @unique
   passwordHash        String     @map("password_hash")
   name                String?
+  designation         String?
   role                UserRole
   status              UserStatus @default(ACTIVE)
   acUsername          String?    @map("ac_username")

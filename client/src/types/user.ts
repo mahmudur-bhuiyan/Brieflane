@@ -8,6 +8,7 @@ export type UserRecord = {
   id: string;
   email: string;
   name: string | null;
+  designation: string | null;
   role: UserRole;
   status: UserStatus;
   createdAt: string;
@@ -55,11 +56,13 @@ export type CreateUserInput = {
   email: string;
   password: string;
   name?: string;
+  designation?: string;
   role: UserRole;
 };
 
 export type UpdateUserInput = {
   name?: string | null;
+  designation?: string | null;
   role?: UserRole;
   status?: UserStatus;
   password?: string;

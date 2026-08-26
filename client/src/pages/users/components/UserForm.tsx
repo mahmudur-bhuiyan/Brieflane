@@ -160,6 +160,15 @@ export function UserForm({ mode, userId }: { mode: UserFormMode; userId?: string
             onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
           />
 
+          <Input
+            label="Designation"
+            type="text"
+            placeholder="e.g. Project Manager"
+            value={form.designation}
+            onChange={(event) => setForm((prev) => ({ ...prev, designation: event.target.value }))}
+            maxLength={120}
+          />
+
           {mode === 'edit' && (
             <Select
               label="Status"

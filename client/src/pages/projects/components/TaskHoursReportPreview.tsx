@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Badge } from '../../../components/ui/Badge';
-import { formatReportHours } from '../utils/taskHoursReport';
+import { formatReportHours, getSignatureDetail } from '../utils/taskHoursReport';
 import type { TaskHoursEmailReport } from '../types/taskHoursReport';
 
 type TaskHoursReportPreviewProps = {
@@ -143,7 +143,7 @@ export function TaskHoursReportPreview({ report }: TaskHoursReportPreviewProps) 
           <div className="mt-8 border-t border-slate-200 pt-6 text-sm text-slate-700">
             <p>Thanks and Regards,</p>
             <p className="mt-2 font-semibold text-slate-900">{report.signature.name}</p>
-            <p className="text-slate-600">{report.signature.email}</p>
+            <p className="text-slate-600">{getSignatureDetail(report.signature)}</p>
           </div>
         </div>
       </div>

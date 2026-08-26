@@ -25,6 +25,7 @@ const pmOne: AuthUser = {
   id: 'pm1',
   email: 'pm1@test.com',
   name: 'PM One',
+  designation: null,
   role: 'PROJECT_MANAGER',
 };
 
@@ -32,6 +33,7 @@ const pmTwo: AuthUser = {
   id: 'pm2',
   email: 'pm2@test.com',
   name: 'PM Two',
+  designation: null,
   role: 'PROJECT_MANAGER',
 };
 
@@ -128,6 +130,7 @@ describe('userCanAccessProject', () => {
         id: 'sa1',
         email: 'admin@test.com',
         name: 'Admin',
+        designation: null,
         role: 'SUPER_ADMIN',
       },
       'project-1',

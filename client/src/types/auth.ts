@@ -4,6 +4,7 @@ export type AuthUser = {
   id: string;
   email: string;
   name: string | null;
+  designation: string | null;
   role: UserRole;
 };
 
@@ -23,6 +24,7 @@ export type MeResponse = {
 
 export type UpdateProfileInput = {
   name: string;
+  designation?: string | null;
 };
 
 export type ChangePasswordInput = {

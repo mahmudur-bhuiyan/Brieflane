@@ -29,6 +29,7 @@ authRouter.post('/login', loginRateLimiter, async (req, res) => {
       id: true,
       email: true,
       name: true,
+      designation: true,
       role: true,
       status: true,
       passwordHash: true,
@@ -71,11 +72,15 @@ authRouter.patch('/profile', authMiddleware, async (req, res) => {
 
   const user = await prisma.user.update({
     where: { id: req.user!.id },
-    data: { name: parsed.data.name },
+    data: {
+      name: parsed.data.name,
+      ...(parsed.data.designation !== undefined && { designation: parsed.data.designation }),
+    },
     select: {
       id: true,
       email: true,
       name: true,
+      designation: true,
       role: true,
     },
   });

@@ -140,8 +140,8 @@
   }
 
   *::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
+    width: 4px;
+    height: 4px;
   }
 
   *::-webkit-scrollbar-track {
@@ -325,8 +325,8 @@
   scrollbar-color: var(--border-strong) transparent;
 
   &::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
+    width: 4px;
+    height: 4px;
   }
 
   &::-webkit-scrollbar-track {

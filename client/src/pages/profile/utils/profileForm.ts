@@ -4,6 +4,7 @@ import type { ProfileFormState } from '../types/profileForm';
 export function createProfileFormState(user: AuthUser): ProfileFormState {
   return {
     name: user.name ?? '',
+    designation: user.designation ?? '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
@@ -19,12 +20,14 @@ export function validateProfileForm(
   user: AuthUser,
 ): { ok: true } | { ok: false; error: string } {
   const trimmedName = form.name.trim();
+  const trimmedDesignation = form.designation.trim();
 
   if (!trimmedName) {
     return { ok: false, error: 'Name is required' };
   }
 
   const nameChanged = trimmedName !== (user.name ?? '');
+  const designationChanged = (trimmedDesignation || null) !== (user.designation ?? null);
   const changingPassword = isChangingPassword(form);
 
   if (changingPassword) {
@@ -41,7 +44,7 @@ export function validateProfileForm(
     }
   }
 
-  if (!nameChanged && !changingPassword) {
+  if (!nameChanged && !designationChanged && !changingPassword) {
     return { ok: false, error: 'No changes to save' };
   }
 

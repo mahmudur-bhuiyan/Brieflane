@@ -9,6 +9,12 @@ export const loginSchema = z.object({
 
 export const updateProfileSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(120, 'Name is too long'),
+  designation: z
+    .string()
+    .trim()
+    .max(120, 'Designation is too long')
+    .nullable()
+    .optional(),
 });
 
 export const changePasswordSchema = z.object({
@@ -32,5 +38,6 @@ export type AuthUser = {
   id: string;
   email: string;
   name: string | null;
+  designation: string | null;
   role: z.infer<typeof userRoleSchema>;
 };

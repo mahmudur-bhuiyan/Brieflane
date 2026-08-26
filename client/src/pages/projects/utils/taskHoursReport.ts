@@ -4,7 +4,16 @@ import type {
   TaskHoursEmailReport,
   TaskHoursReportSignature,
 } from '../types/taskHoursReport';
-import { parseTaskHoursSummary, parseTaskHoursTable } from './taskHoursTable';
+import type { CustomHoursEntry } from '../types/customHours';
+import {
+  getCustomHoursTotal,
+  splitCustomHours,
+} from './customHours';
+import {
+  parseTaskHoursSummary,
+  parseTaskHoursTable,
+  type TaskHoursTableRow,
+} from './taskHoursTable';
 
 const CATEGORY_ORDER = ['Development', 'QA', 'Server', 'PM', 'Other'] as const;
 
@@ -105,6 +114,50 @@ function buildBillableBreakdown(rows: TaskBreakdownRow[]): BillableCategoryBreak
   );
 }
 
+function addPmHoursToBreakdown(
+  breakdown: BillableCategoryBreakdown[],
+  pmHours: CustomHoursEntry[],
+): BillableCategoryBreakdown[] {
+  const pmTotal = roundHours(pmHours.reduce((sum, entry) => sum + entry.hours, 0));
+  if (pmTotal <= 0) {
+    return breakdown;
+  }
+
+  const totals = new Map(breakdown.map((row) => [row.category, row.hours]));
+  totals.set('PM', roundHours((totals.get('PM') ?? 0) + pmTotal));
+
+  return sortCategories(
+    [...totals.entries()].map(([category, hours]) => ({
+      category,
+      hours,
+    })),
+  );
+}
+
+function tableRowToTaskBreakdownRow(row: TaskHoursTableRow): TaskBreakdownRow {
+  const rawJobType = row.values.job_type ?? '—';
+
+  return {
+    userName: row.values.user_name ?? '—',
+    category: rawJobType === '—' ? '—' : formatBreakdownCategory(rawJobType),
+    taskId: row.values.task_id ?? '—',
+    taskDescription: row.values.task_name ?? row.values.task ?? '—',
+    hours: roundHours(parseHoursNumber(row.values.hours)),
+    status: row.values.status === 'Non-Billable' ? 'Non-Billable' : 'Billable',
+  };
+}
+
+function customHoursEntryToTaskBreakdownRow(entry: CustomHoursEntry): TaskBreakdownRow {
+  return {
+    userName: entry.userName,
+    category: formatBreakdownCategory(entry.jobType),
+    taskId: '—',
+    taskDescription: entry.description,
+    hours: roundHours(entry.hours),
+    status: 'Billable',
+  };
+}
+
 function formatPeriod(startDate: string, endDate: string): string {
   if (startDate === '—' && endDate === '—') {
     return '—';
@@ -117,6 +170,7 @@ export function buildTaskHoursEmailReport(
   data: unknown,
   signature: TaskHoursReportSignature,
   projectMeta?: { clientName?: string | null },
+  customHours: CustomHoursEntry[] = [],
 ): TaskHoursEmailReport | null {
   const summary = parseTaskHoursSummary(data);
   const parsedTable = parseTaskHoursTable(data);
@@ -125,42 +179,40 @@ export function buildTaskHoursEmailReport(
     return null;
   }
 
-  const allTaskRows: TaskBreakdownRow[] = parsedTable.rows.map((row) => {
-    const rawJobType = row.values.job_type ?? '—';
+  const { pmHours, customTaskHours } = splitCustomHours(customHours);
+  const additionalBillableHours = getCustomHoursTotal(customHours);
 
-    return {
-      userName: row.values.user_name ?? '—',
-      category:
-        rawJobType === '—' ? '—' : formatBreakdownCategory(rawJobType),
-      taskId: row.values.task_id ?? '—',
-      taskDescription: row.values.task_name ?? row.values.task ?? '—',
-      hours: roundHours(parseHoursNumber(row.values.hours)),
-      status: row.values.status === 'Non-Billable' ? 'Non-Billable' : 'Billable',
-    };
-  });
+  const fetchedTaskRows = parsedTable.rows.map(tableRowToTaskBreakdownRow);
+  const fetchedBillableRows = fetchedTaskRows.filter((row) => row.status === 'Billable');
+  const fetchedNonBillableRows = fetchedTaskRows.filter((row) => row.status === 'Non-Billable');
 
-  const taskBreakdown = allTaskRows.filter((row) => row.status === 'Billable');
+  const customTaskBreakdownRows = customTaskHours.map(customHoursEntryToTaskBreakdownRow);
+  const taskBreakdown = [...fetchedBillableRows, ...customTaskBreakdownRows];
 
-  const totalBillableHours = roundHours(
+  const baseBillableHours = roundHours(
     summary.totalBillableHours !== '—'
       ? parseHoursNumber(summary.totalBillableHours)
-      : allTaskRows
-          .filter((row) => row.status === 'Billable')
-          .reduce((sum, row) => sum + row.hours, 0),
+      : fetchedBillableRows.reduce((sum, row) => sum + row.hours, 0),
   );
+
+  const totalBillableHours = roundHours(baseBillableHours + additionalBillableHours);
 
   const totalNonBillableHours = roundHours(
     summary.totalNonBillableHours !== '—'
       ? parseHoursNumber(summary.totalNonBillableHours)
-      : allTaskRows
-          .filter((row) => row.status === 'Non-Billable')
-          .reduce((sum, row) => sum + row.hours, 0),
+      : fetchedNonBillableRows.reduce((sum, row) => sum + row.hours, 0),
   );
 
-  const totalLoggedHours = roundHours(
+  const baseLoggedHours =
     summary.totalLoggedHours !== '—'
       ? parseHoursNumber(summary.totalLoggedHours)
-      : totalBillableHours + totalNonBillableHours,
+      : baseBillableHours + totalNonBillableHours;
+
+  const totalLoggedHours = roundHours(baseLoggedHours + additionalBillableHours);
+
+  const billableHoursBreakdown = addPmHoursToBreakdown(
+    buildBillableBreakdown(fetchedBillableRows),
+    pmHours,
   );
 
   const period = {
@@ -187,7 +239,7 @@ export function buildTaskHoursEmailReport(
       totalNonBillableHours,
       totalLoggedHours,
     },
-    billableHoursBreakdown: buildBillableBreakdown(taskBreakdown),
+    billableHoursBreakdown,
     taskBreakdown,
     signature,
     email: {
@@ -201,4 +253,9 @@ export function buildTaskHoursEmailReport(
 
 export function formatReportHours(hours: number): string {
   return hours.toFixed(2);
+}
+
+export function getSignatureDetail(signature: TaskHoursReportSignature): string {
+  const designation = signature.designation?.trim();
+  return designation || signature.email;
 }

@@ -24,6 +24,7 @@ const userSelect = {
   id: true,
   email: true,
   name: true,
+  designation: true,
   role: true,
   status: true,
   createdAt: true,
@@ -70,6 +71,7 @@ function toUserRecord(user: {
   id: string;
   email: string;
   name: string | null;
+  designation: string | null;
   role: UserRecord['role'];
   status: UserRecord['status'];
   createdAt: Date;
@@ -79,6 +81,7 @@ function toUserRecord(user: {
     id: user.id,
     email: user.email,
     name: user.name,
+    designation: user.designation,
     role: user.role,
     status: user.status,
     createdAt: user.createdAt.toISOString(),
@@ -252,7 +255,7 @@ usersRouter.post('/', async (req, res) => {
     return;
   }
 
-  const { email, password, name, role } = parsed.data;
+  const { email, password, name, designation, role } = parsed.data;
   const normalizedEmail = email.toLowerCase();
 
   const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
@@ -267,17 +270,10 @@ usersRouter.post('/', async (req, res) => {
       email: normalizedEmail,
       passwordHash: await hashPassword(password),
       name,
+      designation,
       role,
     },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      status: true,
-      createdAt: true,
-      updatedAt: true,
-    },
+    select: userSelect,
   });
 
   res.status(201).json({ user: toUserRecord(user) });
@@ -298,7 +294,7 @@ usersRouter.patch('/:id', async (req, res) => {
     return;
   }
 
-  const { name, role, status, password } = parsed.data;
+  const { name, designation, role, status, password } = parsed.data;
 
   if (status === 'INACTIVE' && existing.id === req.user?.id) {
     res.status(400).json({ error: 'You cannot deactivate your own account' });
@@ -309,19 +305,12 @@ usersRouter.patch('/:id', async (req, res) => {
     where: { id: req.params.id },
     data: {
       ...(name !== undefined && { name }),
+      ...(designation !== undefined && { designation }),
       ...(role !== undefined && { role }),
       ...(status !== undefined && { status }),
       ...(password !== undefined && { passwordHash: await hashPassword(password) }),
     },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      status: true,
-      createdAt: true,
-      updatedAt: true,
-    },
+    select: userSelect,
   });
 
   res.json({ user: toUserRecord(user) });
@@ -343,15 +332,7 @@ usersRouter.delete('/:id', async (req, res) => {
   const user = await prisma.user.update({
     where: { id: req.params.id },
     data: { status: 'INACTIVE' },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      status: true,
-      createdAt: true,
-      updatedAt: true,
-    },
+    select: userSelect,
   });
 
   res.json({ user: toUserRecord(user) });
