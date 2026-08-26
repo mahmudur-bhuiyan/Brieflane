@@ -36,7 +36,13 @@ export function CreateProjectPage() {
 
     try {
       const result = await createProject.mutateAsync(payload);
-      toast.success('Project created. Add client details below.');
+
+      if (result.assigned && result.created === false) {
+        toast.success('Project linked to your account.');
+      } else {
+        toast.success('Project created. Add client details below.');
+      }
+
       navigate(`/projects/${result.project.id}`);
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to create project'));

@@ -10,8 +10,9 @@ import {
 import {
   activeCollabCredentialsSchema,
   activeCollabProjectSearchSchema,
-  activeCollabTaskHoursSchema,
+  activeCollabTaskHoursRequestSchema,
 } from '../schemas/activecollab.js';
+import { getStoredActiveCollabCredentials } from '../lib/activecollab/credentials.js';
 import {
   fetchAcProjectUserTaskHours,
   searchActiveCollabProjects,
@@ -22,6 +23,7 @@ import { prisma } from '../lib/prisma.js';
 import { toReportRunRecord } from '../schemas/report.js';
 import {
   assignProjectToUser,
+  linkExistingProjectToUser,
   projectListFilter,
   userCanAccessProject,
 } from '../lib/project-access.js';
@@ -144,19 +146,36 @@ projectsRouter.post('/sync', async (req, res) => {
 });
 
 projectsRouter.post('/ac-task-hours', async (req, res) => {
-  const parsed = activeCollabTaskHoursSchema.safeParse(req.body);
+  const parsed = activeCollabTaskHoursRequestSchema.safeParse(req.body);
 
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.flatten().fieldErrors });
     return;
   }
 
+  let credentials;
+
+  if ('useSavedCredentials' in parsed.data) {
+    const stored = await getStoredActiveCollabCredentials(req.user!.id);
+
+    if (!stored) {
+      res.status(400).json({
+        error: 'No saved ActiveCollab credentials found. Save them in your profile first.',
+      });
+      return;
+    }
+
+    credentials = stored;
+  } else {
+    credentials = {
+      username: parsed.data.username,
+      password: parsed.data.password,
+    };
+  }
+
   try {
     const data = await fetchAcProjectUserTaskHours(
-      {
-        username: parsed.data.username,
-        password: parsed.data.password,
-      },
+      credentials,
       {
         projectId: parsed.data.projectId,
         startDate: parsed.data.startDate,
@@ -178,14 +197,28 @@ projectsRouter.post('/ac-search', async (req, res) => {
     return;
   }
 
+  let credentials;
+
+  if ('useSavedCredentials' in parsed.data) {
+    const stored = await getStoredActiveCollabCredentials(req.user!.id);
+
+    if (!stored) {
+      res.status(400).json({
+        error: 'No saved ActiveCollab credentials found. Save them in your profile first.',
+      });
+      return;
+    }
+
+    credentials = stored;
+  } else {
+    credentials = {
+      username: parsed.data.username,
+      password: parsed.data.password,
+    };
+  }
+
   try {
-    const projects = await searchActiveCollabProjects(
-      {
-        username: parsed.data.username,
-        password: parsed.data.password,
-      },
-      parsed.data.projectName,
-    );
+    const projects = await searchActiveCollabProjects(credentials, parsed.data.projectName);
 
     res.json({ projects, count: projects.length });
   } catch (error) {
@@ -255,6 +288,17 @@ projectsRouter.post('/', async (req, res) => {
   const existing = await prisma.project.findUnique({ where: { acProjectId } });
 
   if (existing) {
+    if (req.user?.role === 'PROJECT_MANAGER') {
+      const { assigned } = await linkExistingProjectToUser(req.user, existing.id);
+
+      res.status(200).json({
+        project: toProjectRecord(existing),
+        created: false,
+        assigned,
+      });
+      return;
+    }
+
     res.status(409).json({ error: 'A project with this ActiveCollab id already exists' });
     return;
   }
@@ -275,7 +319,11 @@ projectsRouter.post('/', async (req, res) => {
     await assignProjectToUser(req.user.id, project.id);
   }
 
-  res.status(201).json({ project: toProjectRecord(project) });
+  res.status(201).json({
+    project: toProjectRecord(project),
+    created: true,
+    assigned: req.user?.role === 'PROJECT_MANAGER',
+  });
 });
 
 function normalizeProjectName(value: string): string {

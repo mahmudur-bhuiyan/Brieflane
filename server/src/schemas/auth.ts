@@ -16,9 +16,17 @@ export const changePasswordSchema = z.object({
   newPassword: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
+export const updateActiveCollabCredentialsSchema = z.object({
+  username: z.string().trim().min(1, 'Email or username is required').max(255),
+  password: z.string(),
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export type UpdateActiveCollabCredentialsInput = z.infer<
+  typeof updateActiveCollabCredentialsSchema
+>;
 
 export type AuthUser = {
   id: string;

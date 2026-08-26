@@ -29,3 +29,13 @@ export type ChangePasswordInput = {
   currentPassword: string;
   newPassword: string;
 };
+
+export type ActiveCollabCredentialsResponse = {
+  username: string | null;
+  configured: boolean;
+};
+
+export type UpdateActiveCollabCredentialsInput = {
+  username: string;
+  password: string;
+};

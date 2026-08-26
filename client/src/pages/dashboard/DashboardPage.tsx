@@ -1,8 +1,6 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AppLayout } from '../../components/layout/AppLayout';
-import { ReportRunSummaryCards, ReportRunTable } from '../../components/domain/ReportRunTable';
-import { IconFileText, IconSparkles } from '../../components/common/icons';
+import { IconSparkles } from '../../components/common/icons';
 import { Badge } from '../../components/ui/Badge';
 import { Card } from '../../components/ui/Card';
 import { PageHeader } from '../../components/ui/PageHeader';
@@ -26,7 +24,7 @@ export function DashboardPage() {
     >
       <PageHeader
         title={`Welcome back${user?.name ? `, ${user.name.split(' ')[0]}` : ''}`}
-        description="Manage projects, users, and client reports from one place."
+        description="Manage projects and users from one place."
       />
 
       <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3 xl:mb-8">
@@ -76,28 +74,6 @@ export function DashboardPage() {
             </div>
           </div>
         </Card>
-      )}
-
-      {dashboard?.reports && (
-        <div className="mb-8 space-y-6">
-          <div>
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-faint">
-              Report activity
-            </h2>
-            <ReportRunSummaryCards summary={dashboard.reports.summary} />
-          </div>
-
-          <Card>
-            <div className="mb-4 flex items-center gap-2">
-              <IconFileText width={18} height={18} className="text-muted" />
-              <h3 className="font-semibold text-heading">Recent report runs</h3>
-            </div>
-            <ReportRunTable
-              reportRuns={dashboard.reports.recent}
-              emptyMessage="No reports triggered yet. Generate one from a project detail page."
-            />
-          </Card>
-        </div>
       )}
 
       <div>

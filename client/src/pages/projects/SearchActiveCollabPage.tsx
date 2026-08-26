@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '../../components/layout/AppLayout';
 import {
@@ -16,6 +16,8 @@ import { Input } from '../../components/ui/Input';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { useAuth } from '../../context/AuthContext';
 import { ApiError } from '../../lib/api';
+import { useActiveCollabCredentialsQuery } from '../../lib/queries/auth';
+import { isSuperAdmin } from '../../lib/roles';
 import {
   getApiErrorMessage,
   useCreateProjectMutation,
@@ -23,15 +25,22 @@ import {
   useSearchAcProjectsMutation,
 } from '../../lib/queries/projects';
 import { toast } from '../../lib/toast';
+import { ACTIVE_COLLAB_PASSWORD_MASK } from '../profile/utils/activeCollabCredentialsForm';
 import type { AcProjectSearchResult, ActiveCollabCredentials } from '../../types/project';
 
 export function SearchActiveCollabPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const superAdmin = isSuperAdmin(user?.role);
+  const credentialsQuery = useActiveCollabCredentialsQuery();
   const searchProjects = useSearchAcProjectsMutation();
   const createProject = useCreateProjectMutation();
   const { data: existingData } = useProjectsQuery('');
 
+  const savedCredentials = credentialsQuery.data;
+  const hasSavedCredentials = savedCredentials?.configured ?? false;
+
+  const [useSavedCredentials, setUseSavedCredentials] = useState(false);
   const [form, setForm] = useState<ActiveCollabCredentials & { projectName: string }>(() => ({
     username: user?.email ?? '',
     password: '',
@@ -44,6 +53,19 @@ export function SearchActiveCollabPage() {
   const [addedIds, setAddedIds] = useState<Set<number>>(() => new Set());
   const [addingId, setAddingId] = useState<number | null>(null);
   const [rowErrors, setRowErrors] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    if (!hasSavedCredentials || !savedCredentials) {
+      return;
+    }
+
+    setUseSavedCredentials(true);
+    setForm((prev) => ({
+      ...prev,
+      username: savedCredentials.username?.trim() || user?.email || prev.username,
+      password: ACTIVE_COLLAB_PASSWORD_MASK,
+    }));
+  }, [hasSavedCredentials, savedCredentials, user?.email]);
 
   const existingAcIds = useMemo(() => {
     const ids = new Set<number>();
@@ -68,13 +90,6 @@ export function SearchActiveCollabPage() {
     setError(null);
     setRowErrors({});
 
-    const username = form.username.trim();
-
-    if (!username || !form.password) {
-      setError('Enter your ActiveCollab email or username and password');
-      return;
-    }
-
     if (!projectName) {
       setError('Enter a project name to search');
       return;
@@ -82,6 +97,35 @@ export function SearchActiveCollabPage() {
 
     if (projectName.length < 2) {
       setError('Enter at least 2 characters to search');
+      return;
+    }
+
+    if (useSavedCredentials) {
+      if (!hasSavedCredentials) {
+        setError('No saved ActiveCollab credentials found. Save them in your profile first.');
+        return;
+      }
+
+      try {
+        const response = await searchProjects.mutateAsync({
+          useSavedCredentials: true,
+          projectName,
+        });
+
+        setResults(response.projects);
+        setResultFilter('');
+        setLastSearch(projectName);
+      } catch (err) {
+        setError(getApiErrorMessage(err, 'Failed to search ActiveCollab projects'));
+      }
+
+      return;
+    }
+
+    const username = form.username.trim();
+
+    if (!username || !form.password) {
+      setError('Enter your ActiveCollab email or username and password');
       return;
     }
 
@@ -114,17 +158,29 @@ export function SearchActiveCollabPage() {
     setAddingId(project.id);
 
     try {
-      await createProject.mutateAsync({
+      const result = await createProject.mutateAsync({
         acProjectId: project.id,
         name: project.name,
       });
 
       setAddedIds((prev) => new Set(prev).add(project.id));
-      toast.success(`Added "${project.name}" to your project list.`);
+
+      if (result.assigned && result.created === false) {
+        toast.success(`Linked "${project.name}" to your project list.`);
+      } else if (result.created === false) {
+        toast.success(`"${project.name}" is already in your project list.`);
+      } else {
+        toast.success(`Added "${project.name}" to your project list.`);
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         setAddedIds((prev) => new Set(prev).add(project.id));
-        setRowErrors((prev) => ({ ...prev, [project.id]: 'Already in your project list' }));
+        setRowErrors((prev) => ({
+          ...prev,
+          [project.id]: superAdmin
+            ? 'Already in Brieflane'
+            : 'This project exists but could not be added to your list',
+        }));
       } else {
         setRowErrors((prev) => ({
           ...prev,
@@ -139,6 +195,27 @@ export function SearchActiveCollabPage() {
   function isProjectAdded(acProjectId: number): boolean {
     return existingAcIds.has(acProjectId) || addedIds.has(acProjectId);
   }
+
+  function handleUseSavedCredentialsChange(checked: boolean) {
+    setUseSavedCredentials(checked);
+
+    if (checked && savedCredentials) {
+      setForm((prev) => ({
+        ...prev,
+        username: savedCredentials.username?.trim() || user?.email || prev.username,
+        password: ACTIVE_COLLAB_PASSWORD_MASK,
+      }));
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      username: user?.email ?? prev.username,
+      password: '',
+    }));
+  }
+
+  const credentialsDisabled = useSavedCredentials && hasSavedCredentials;
 
   return (
     <AppLayout
@@ -159,8 +236,9 @@ export function SearchActiveCollabPage() {
             <div>
               <p className="text-sm font-medium text-heading">ActiveCollab import</p>
               <p className="mt-1 max-w-2xl text-sm text-muted">
-                Credentials are used only for this session. Add projects now and fill in client
-                email later from the project list.
+                {hasSavedCredentials
+                  ? 'Use your saved profile credentials or sign in manually for this search.'
+                  : 'Credentials are used only for this session. Add projects now and fill in client email later from the project list.'}
               </p>
             </div>
           </div>
@@ -176,10 +254,23 @@ export function SearchActiveCollabPage() {
           </div>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
+            {hasSavedCredentials && (
+              <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-subtle bg-subtle px-3 py-2.5">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={useSavedCredentials}
+                  onChange={(event) => handleUseSavedCredentialsChange(event.target.checked)}
+                />
+                <span className="text-sm text-heading">Use saved credentials</span>
+              </label>
+            )}
+
             <Input
               label="Email or username"
               type="text"
-              required
+              required={!credentialsDisabled}
+              disabled={credentialsDisabled}
               autoComplete="username"
               icon={<IconUser width={16} height={16} />}
               value={form.username}
@@ -188,7 +279,8 @@ export function SearchActiveCollabPage() {
             <Input
               label="Password"
               type="password"
-              required
+              required={!credentialsDisabled}
+              disabled={credentialsDisabled}
               autoComplete="current-password"
               value={form.password}
               onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
@@ -265,7 +357,9 @@ export function SearchActiveCollabPage() {
                 </div>
                 <p className="text-sm font-medium text-heading">No search yet</p>
                 <p className="mt-1 max-w-sm text-sm text-muted">
-                  Enter your credentials and a project name to browse ActiveCollab results here.
+                  {hasSavedCredentials
+                    ? 'Use saved credentials or enter them manually, then search by project name.'
+                    : 'Enter your credentials and a project name to browse ActiveCollab results here.'}
                 </p>
               </div>
             ) : results.length === 0 ? (

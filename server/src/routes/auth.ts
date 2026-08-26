@@ -1,7 +1,13 @@
 import { Router } from 'express';
-import { changePasswordSchema, loginSchema, updateProfileSchema } from '../schemas/auth.js';
+import {
+  changePasswordSchema,
+  loginSchema,
+  updateActiveCollabCredentialsSchema,
+  updateProfileSchema,
+} from '../schemas/auth.js';
 import { prisma } from '../lib/prisma.js';
 import { hashPassword, signToken, toAuthUser, verifyPassword } from '../lib/auth.js';
+import { encryptSecret } from '../lib/credentials-crypto.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { loginRateLimiter } from '../middleware/rate-limit.js';
 
@@ -110,4 +116,73 @@ authRouter.patch('/password', authMiddleware, async (req, res) => {
   });
 
   res.json({ ok: true });
+});
+
+authRouter.get('/activecollab-credentials', authMiddleware, async (req, res) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user!.id },
+    select: {
+      acUsername: true,
+      acPasswordEncrypted: true,
+    },
+  });
+
+  if (!user) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+
+  res.json({
+    username: user.acUsername,
+    configured: Boolean(user.acUsername && user.acPasswordEncrypted),
+  });
+});
+
+authRouter.put('/activecollab-credentials', authMiddleware, async (req, res) => {
+  const parsed = updateActiveCollabCredentialsSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten().fieldErrors });
+    return;
+  }
+
+  const username = parsed.data.username;
+  const password = parsed.data.password;
+
+  const existing = await prisma.user.findUnique({
+    where: { id: req.user!.id },
+    select: { acPasswordEncrypted: true },
+  });
+
+  if (!existing) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+
+  if (!password && !existing.acPasswordEncrypted) {
+    res.status(400).json({ error: 'Password is required' });
+    return;
+  }
+
+  const data: { acUsername: string; acPasswordEncrypted?: string } = {
+    acUsername: username,
+  };
+
+  if (password) {
+    data.acPasswordEncrypted = encryptSecret(password);
+  }
+
+  const user = await prisma.user.update({
+    where: { id: req.user!.id },
+    data,
+    select: {
+      acUsername: true,
+      acPasswordEncrypted: true,
+    },
+  });
+
+  res.json({
+    username: user.acUsername,
+    configured: Boolean(user.acUsername && user.acPasswordEncrypted),
+  });
 });

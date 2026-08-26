@@ -45,3 +45,17 @@ export async function assignProjectToUser(userId: string, projectId: string): Pr
     update: {},
   });
 }
+
+export async function linkExistingProjectToUser(
+  user: AuthUser,
+  projectId: string,
+): Promise<{ assigned: boolean }> {
+  const hasAccess = await userCanAccessProject(user, projectId);
+
+  if (hasAccess) {
+    return { assigned: false };
+  }
+
+  await assignProjectToUser(user.id, projectId);
+  return { assigned: true };
+}

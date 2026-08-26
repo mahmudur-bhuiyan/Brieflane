@@ -7,28 +7,33 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { useAuth } from '../../context/AuthContext';
+import { useActiveCollabCredentialsQuery } from '../../lib/queries/auth';
 import { formatRole } from '../../lib/roles';
+import { ActiveCollabCredentialsModal } from './components/ActiveCollabCredentialsModal';
 import { ProfileEditModal } from './components/ProfileEditModal';
 import { ProfileField } from './components/ProfileField';
 
+type ProfileModal = 'edit' | 'activecollab' | null;
+
 export function ProfilePage() {
   const { user } = useAuth();
-  const [editing, setEditing] = useState(false);
+  const { data: acCredentials } = useActiveCollabCredentialsQuery();
+  const [openModal, setOpenModal] = useState<ProfileModal>(null);
 
   useEffect(() => {
-    if (!editing) {
+    if (!openModal) {
       return;
     }
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        setEditing(false);
+        setOpenModal(null);
       }
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [editing]);
+  }, [openModal]);
 
   if (!user) {
     return null;
@@ -38,11 +43,24 @@ export function ProfilePage() {
     <AppLayout title="Profile" description="View and update your account details.">
       <PageHeader
         title="Profile"
-        description="Your account information and access level."
+        description="Your account information."
         action={
-          <Button variant="secondary" onClick={() => setEditing(true)} className="w-full sm:w-auto">
-            Edit profile
-          </Button>
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap md:w-auto">
+            <Button
+              variant="secondary"
+              onClick={() => setOpenModal('edit')}
+              className="w-full sm:w-auto"
+            >
+              Edit profile
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => setOpenModal('activecollab')}
+              className="w-full sm:w-auto"
+            >
+              ActiveCollab credentials
+            </Button>
+          </div>
         }
       />
 
@@ -75,9 +93,12 @@ export function ProfilePage() {
               <span>{formatRole(user.role)}</span>
             </span>
             <Badge variant="success">Active session</Badge>
+            {acCredentials?.configured && (
+              <Badge variant="accent">ActiveCollab configured</Badge>
+            )}
           </div>
 
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
+          <div className="mt-8 grid gap-4 md:grid-cols-2">
             <ProfileField
               icon={<IconUser width={16} height={16} />}
               label="Display name"
@@ -89,17 +110,16 @@ export function ProfilePage() {
               value={user.email}
               hint="Cannot be changed"
             />
-            <ProfileField
-              icon={<IconShield width={16} height={16} />}
-              label="Access level"
-              value={formatRole(user.role)}
-              hint="Managed by administrators"
-            />
           </div>
         </div>
       </Card>
 
-      {editing && <ProfileEditModal user={user} onClose={() => setEditing(false)} />}
+      {openModal === 'edit' && (
+        <ProfileEditModal user={user} onClose={() => setOpenModal(null)} />
+      )}
+      {openModal === 'activecollab' && (
+        <ActiveCollabCredentialsModal user={user} onClose={() => setOpenModal(null)} />
+      )}
     </AppLayout>
   );
 }
