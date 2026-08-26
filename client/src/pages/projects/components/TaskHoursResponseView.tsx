@@ -1,5 +1,8 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { IconCopy } from '../../../components/common/icons';
+import { Button } from '../../../components/ui/Button';
 import { DataTable, type DataTableColumn } from '../../../components/ui/DataTable';
+import { toast } from '../../../lib/toast';
 import { DEFAULT_PAGE_SIZE, type PageSize, type SortOrder } from '../../../types/pagination';
 import {
   filterTaskHoursRows,
@@ -29,9 +32,7 @@ function TabButton({
       type="button"
       onClick={onClick}
       className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-        active
-          ? 'bg-surface text-heading shadow-sm'
-          : 'text-muted hover:text-heading'
+        active ? 'bg-surface text-heading shadow-sm' : 'text-muted hover:text-heading'
       }`}
     >
       {children}
@@ -123,6 +124,15 @@ export function TaskHoursResponseView({ data }: TaskHoursResponseViewProps) {
     setPage(1);
   }, []);
 
+  const handleCopyJson = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(formattedJson);
+      toast.success('JSON copied to clipboard.');
+    } catch {
+      toast.error('Failed to copy JSON.');
+    }
+  }, [formattedJson]);
+
   return (
     <div>
       <div className="border-b border-subtle px-5 py-4 sm:px-6">
@@ -131,7 +141,9 @@ export function TaskHoursResponseView({ data }: TaskHoursResponseViewProps) {
             <h2 className="text-base font-semibold text-heading">Task hours response</h2>
             <p className="mt-1 text-sm text-muted">
               Browse fetched data in a table or inspect the raw JSON from{' '}
-              <code className="rounded bg-subtle px-1.5 py-0.5 text-xs">ac-project-user-task-hours</code>
+              <code className="rounded bg-subtle px-1.5 py-0.5 text-xs">
+                ac-project-user-task-hours
+              </code>
               .
             </p>
           </div>
@@ -178,6 +190,12 @@ export function TaskHoursResponseView({ data }: TaskHoursResponseViewProps) {
         )
       ) : (
         <div className="p-4 sm:p-6">
+          <div className="mb-3 flex justify-end">
+            <Button type="button" variant="secondary" size="sm" onClick={handleCopyJson}>
+              <IconCopy className="h-4 w-4" />
+              Copy JSON
+            </Button>
+          </div>
           <pre className="scrollbar-thin max-h-[min(70dvh,48rem)] overflow-auto rounded-xl border border-subtle bg-subtle p-4 text-xs leading-relaxed text-heading sm:text-sm">
             {formattedJson}
           </pre>

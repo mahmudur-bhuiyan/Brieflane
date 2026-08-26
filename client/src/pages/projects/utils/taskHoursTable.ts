@@ -124,12 +124,7 @@ function extractDisplayValue(value: unknown): string {
 
   if (isRecord(value)) {
     const name =
-      value.name ??
-      value.title ??
-      value.label ??
-      value.task_name ??
-      value.user_name ??
-      value.email;
+      value.name ?? value.title ?? value.label ?? value.task_name ?? value.user_name ?? value.email;
 
     if (typeof name === 'string' && name.trim()) {
       const id = value.id ?? value.task_id ?? value.user_id;
@@ -310,7 +305,9 @@ function getChildRecords(value: unknown): Record<string, unknown>[] {
   }
 
   if (isRecord(value)) {
-    return Object.values(value).filter((entry): entry is Record<string, unknown> => isRecord(entry));
+    return Object.values(value).filter((entry): entry is Record<string, unknown> =>
+      isRecord(entry),
+    );
   }
 
   return [];
@@ -368,9 +365,7 @@ function sortColumns(columns: string[]): string[] {
 export function formatTaskHoursColumnHeader(key: string): string {
   const leaf = key.split('.').pop() ?? key;
 
-  return leaf
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (character) => character.toUpperCase());
+  return leaf.replace(/_/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
 export function parseTaskHoursTable(data: unknown): ParsedTaskHoursTable {
@@ -433,6 +428,8 @@ export function sortTaskHoursRows(
       return direction * (aNumber - bNumber);
     }
 
-    return direction * aValue.localeCompare(bValue, undefined, { numeric: true, sensitivity: 'base' });
+    return (
+      direction * aValue.localeCompare(bValue, undefined, { numeric: true, sensitivity: 'base' })
+    );
   });
 }
