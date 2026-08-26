@@ -219,7 +219,9 @@ client/src/
     layout/       # App shell: AppLayout
     routing/      # Route guards: ProtectedRoute, SuperAdminRoute
     domain/       # Shared feature UI used across pages (e.g. ReportRunTable)
-    common/       # Cross-cutting UI: icons, ThemeToggle
+    common/       # Cross-cutting UI: icons, ThemeToggle, AppToaster
+  lib/
+    toast.ts      # Re-export of Sonner toast API
   pages/
     <page-name>/          # One folder per route area
       <PageName>Page.tsx  # Page entry — routing, data fetching, composition
@@ -234,7 +236,7 @@ client/src/
 | **Layout** | `client/src/components/layout/` | App shell: `AppLayout` |
 | **Routing** | `client/src/components/routing/` | Route guards: `ProtectedRoute`, `SuperAdminRoute` |
 | **Domain composites** | `client/src/components/domain/` | Feature-specific but shared across pages (e.g. `ReportRunTable`) |
-| **Common** | `client/src/components/common/` | Icons, theme toggle, and other cross-cutting UI |
+| **Common** | `client/src/components/common/` | Icons, theme toggle, `AppToaster` (Sonner), and other cross-cutting UI |
 | **Pages** | `client/src/pages/<page-name>/` | Compose primitives + layout; hold data fetching and page logic only |
 | **Page components** | `client/src/pages/<page-name>/components/` | Modals, forms, and sections used only on that page |
 | **Page hooks** | `client/src/pages/<page-name>/hooks/` | Custom hooks scoped to a single page |
@@ -246,6 +248,7 @@ client/src/
 3. **Create shared components** — add to `components/ui/` (generic) or `components/domain/` (feature-specific, 2+ pages) only when reuse is clear.
 4. **Keep pages thin** — extract page-only UI into `pages/<name>/components/`; extract page-only hooks into `pages/<name>/hooks/`.
 5. **Icons** — import from `client/src/components/common/icons.tsx`; don't inline SVGs in pages.
+6. **Toasts** — success feedback via `toast.success()` from `client/src/lib/toast.ts` (bottom-right, theme-aware via `AppToaster`). Keep errors inline in forms and modals.
 
 **Standard page structure**
 

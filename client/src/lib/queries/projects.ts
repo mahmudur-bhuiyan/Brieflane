@@ -7,6 +7,7 @@ import type {
   ProjectsListResponse,
   SearchAcProjectsInput,
   SearchAcProjectsResponse,
+  SyncProjectResponse,
   SyncProjectsResponse,
   UpdateProjectInput,
 } from '../../types/project';
@@ -91,6 +92,24 @@ export function useSyncProjectsMutation() {
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+    },
+  });
+}
+
+export function useSyncProjectMutation(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (credentials: ActiveCollabCredentials) =>
+      apiFetch<SyncProjectResponse>(`/api/projects/${projectId}/sync`, {
+        method: 'POST',
+        body: JSON.stringify(credentials),
+      }),
+    onSuccess: (data) => {
+      if (data.status === 'synced') {
+        queryClient.setQueryData(queryKeys.projects.detail(projectId), { project: data.project });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+      }
     },
   });
 }

@@ -15,6 +15,7 @@ import {
   useUserAssignmentsQuery,
   useUserQuery,
 } from '../../../lib/queries/users';
+import { toast } from '../../../lib/toast';
 import {
   buildCreateUserPayload,
   buildUpdateUserPayload,
@@ -23,19 +24,15 @@ import {
 } from '../utils/userForm';
 import type { UserFormMode } from '../types/userForm';
 
-export function UserForm({
-  mode,
-  userId,
-}: {
-  mode: UserFormMode;
-  userId?: string;
-}) {
+export function UserForm({ mode, userId }: { mode: UserFormMode; userId?: string }) {
   const navigate = useNavigate();
   const createUser = useCreateUserMutation();
   const updateUser = useUpdateUserMutation();
-  const { data: userData, isPending: isUserPending, isError: isUserError } = useUserQuery(
-    mode === 'edit' ? userId : undefined,
-  );
+  const {
+    data: userData,
+    isPending: isUserPending,
+    isError: isUserError,
+  } = useUserQuery(mode === 'edit' ? userId : undefined);
   const user = userData?.user ?? null;
   const setAssignments = useSetUserAssignmentsMutation(user?.id ?? '');
   const { data: projectsData } = useProjectsQuery('');
@@ -77,12 +74,15 @@ export function UserForm({
     try {
       if (mode === 'create') {
         await createUser.mutateAsync(buildCreateUserPayload(form));
+        toast.success('User created.');
       } else if (user) {
         await updateUser.mutateAsync({ id: user.id, payload: buildUpdateUserPayload(form) });
 
         if (user.role === 'PROJECT_MANAGER') {
           await setAssignments.mutateAsync({ projectIds: selectedProjectIds });
         }
+
+        toast.success('User updated.');
       }
 
       navigate('/users');
@@ -134,9 +134,7 @@ export function UserForm({
       <PageHeader
         title={mode === 'create' ? 'Add user' : user?.name || user?.email || 'Edit user'}
         description={
-          mode === 'create'
-            ? 'Create a Project Manager account.'
-            : 'Update status or password.'
+          mode === 'create' ? 'Create a Project Manager account.' : 'Update status or password.'
         }
       />
 

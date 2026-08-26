@@ -1,10 +1,7 @@
 import { useState } from 'react';
 import { Button } from '../../../components/ui/Button';
 import { Modal } from '../../../components/ui/Modal';
-import {
-  getApiErrorMessage,
-  useGenerateReportMutation,
-} from '../../../lib/queries/projects';
+import { getApiErrorMessage, useGenerateReportMutation } from '../../../lib/queries/projects';
 import type { ProjectRecord } from '../../../types/project';
 
 export function GenerateReportModal({
@@ -40,7 +37,9 @@ export function GenerateReportModal({
       <dl className="space-y-3 text-sm">
         <div>
           <dt className="text-muted">ActiveCollab project</dt>
-          <dd className="font-medium text-heading">{project.name} (id {project.acProjectId})</dd>
+          <dd className="font-medium text-heading">
+            {project.name} (id {project.acProjectId})
+          </dd>
         </div>
         <div>
           <dt className="text-muted">Primary recipient</dt>

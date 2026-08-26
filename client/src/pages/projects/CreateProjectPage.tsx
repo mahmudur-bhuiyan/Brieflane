@@ -12,14 +12,9 @@ import { Button } from '../../components/ui/Button';
 import { Card, CardHeader } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { PageHeader } from '../../components/ui/PageHeader';
-import {
-  getApiErrorMessage,
-  useCreateProjectMutation,
-} from '../../lib/queries/projects';
-import {
-  emptyCreateProjectForm,
-  type CreateProjectFormState,
-} from './types/createProjectForm';
+import { getApiErrorMessage, useCreateProjectMutation } from '../../lib/queries/projects';
+import { toast } from '../../lib/toast';
+import { emptyCreateProjectForm, type CreateProjectFormState } from './types/createProjectForm';
 import { buildCreateProjectPayload } from './utils/createProjectForm';
 import { PageBackLink } from './components/PageBackLink';
 
@@ -41,9 +36,8 @@ export function CreateProjectPage() {
 
     try {
       const result = await createProject.mutateAsync(payload);
-      navigate(`/projects/${result.project.id}`, {
-        state: { message: 'Project created. Add client details below.' },
-      });
+      toast.success('Project created. Add client details below.');
+      navigate(`/projects/${result.project.id}`);
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to create project'));
     }

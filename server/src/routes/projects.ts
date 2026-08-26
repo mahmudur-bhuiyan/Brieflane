@@ -246,6 +246,88 @@ projectsRouter.post('/', async (req, res) => {
   res.status(201).json({ project: toProjectRecord(project) });
 });
 
+function normalizeProjectName(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+projectsRouter.post('/:id/sync', async (req, res) => {
+  const id = paramId(req.params.id);
+
+  if (!id) {
+    res.status(400).json({ error: 'Invalid project id' });
+    return;
+  }
+
+  const parsed = activeCollabCredentialsSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten().fieldErrors });
+    return;
+  }
+
+  const project = await prisma.project.findUnique({ where: { id } });
+
+  if (!project || !(await userCanAccessProject(req.user!, id))) {
+    res.status(404).json({ error: 'Project not found' });
+    return;
+  }
+
+  try {
+    const acResults = await searchActiveCollabProjects(parsed.data, project.name);
+    const brieflane = { name: project.name, acProjectId: project.acProjectId };
+    const exactIdMatch = acResults.find((result) => result.id === project.acProjectId);
+
+    if (exactIdMatch) {
+      const namesMatch =
+        normalizeProjectName(exactIdMatch.name) === normalizeProjectName(project.name);
+
+      if (namesMatch) {
+        const now = new Date();
+        const updated = await prisma.project.update({
+          where: { id },
+          data: {
+            name: exactIdMatch.name,
+            lastSyncedAt: now,
+          },
+        });
+
+        res.json({ status: 'synced', project: toProjectRecord(updated) });
+        return;
+      }
+
+      res.json({
+        status: 'mismatch',
+        brieflane,
+        activeCollab: exactIdMatch,
+        similarProjects: acResults,
+      });
+      return;
+    }
+
+    const nameMatch = acResults.find(
+      (result) => normalizeProjectName(result.name) === normalizeProjectName(project.name),
+    );
+
+    if (nameMatch) {
+      res.json({
+        status: 'mismatch',
+        brieflane,
+        activeCollab: nameMatch,
+        similarProjects: acResults,
+      });
+      return;
+    }
+
+    res.json({
+      status: 'not_found',
+      brieflane,
+      similarProjects: acResults,
+    });
+  } catch (error) {
+    handleActiveCollabError(error, res);
+  }
+});
+
 projectsRouter.post('/:id/generate-report', reportTriggerRateLimiter, async (req, res) => {
   const id = paramId(req.params.id);
 

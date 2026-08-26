@@ -116,6 +116,8 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
   }
 
   body {
@@ -128,6 +130,31 @@
     transition:
       background-color 0.2s ease,
       color 0.2s ease;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--border-strong);
+    border-radius: 9999px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--text-faint);
   }
 
   #root {
@@ -298,8 +325,8 @@
   scrollbar-color: var(--border-strong) transparent;
 
   &::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
   }
 
   &::-webkit-scrollbar-track {
@@ -314,4 +341,61 @@
   &::-webkit-scrollbar-thumb:hover {
     background-color: var(--text-faint);
   }
+}
+
+/* Toast notifications (Sonner) */
+.bl-toast {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 18rem;
+  max-width: 24rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  box-shadow: var(--select-menu-shadow);
+}
+
+.bl-toast-success {
+  border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--card-bg));
+  color: var(--nav-active-text);
+}
+
+.bl-toast-error {
+  border: 1px solid color-mix(in srgb, #ef4444 60%, transparent);
+  background: color-mix(in srgb, #ef4444 12%, var(--card-bg));
+  color: #fca5a5;
+}
+
+[data-theme='light'] .bl-toast-error {
+  color: #b91c1c;
+}
+
+.bl-toast-info {
+  border: 1px solid color-mix(in srgb, #3b82f6 60%, transparent);
+  background: color-mix(in srgb, #3b82f6 12%, var(--card-bg));
+  color: #93c5fd;
+}
+
+[data-theme='light'] .bl-toast-info {
+  color: #1d4ed8;
+}
+
+.bl-toast-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+.bl-toast-close:hover {
+  opacity: 1;
 }

@@ -4,10 +4,7 @@ import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Modal } from '../../../components/ui/Modal';
 import { useAuth } from '../../../context/AuthContext';
-import {
-  getApiErrorMessage,
-  useSyncProjectsMutation,
-} from '../../../lib/queries/projects';
+import { getApiErrorMessage, useSyncProjectsMutation } from '../../../lib/queries/projects';
 import type { ActiveCollabCredentials } from '../../../types/project';
 
 export function SyncActiveCollabModal({

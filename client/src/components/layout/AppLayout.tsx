@@ -318,8 +318,8 @@ export function AppLayout({ title, description, children }: AppLayoutProps) {
   }
 
   return (
-    <div className="flex min-h-dvh w-full min-w-0 flex-col bg-app">
-      <header className="header-bar sticky top-0 z-30 flex h-16 shrink-0 backdrop-blur-xl">
+    <div className="min-h-dvh w-full min-w-0 bg-app">
+      <header className="header-bar fixed inset-x-0 top-0 z-30 flex h-16 shrink-0 backdrop-blur-xl">
         <TopBar
           title={title}
           description={description}
@@ -330,7 +330,7 @@ export function AppLayout({ title, description, children }: AppLayoutProps) {
         />
       </header>
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex w-full min-h-[calc(100dvh-4rem)] pt-16">
         {sidebarOpen && (
           <button
             type="button"

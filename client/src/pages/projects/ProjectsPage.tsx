@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useCallback, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from '../../lib/toast';
 import { AppLayout } from '../../components/layout/AppLayout';
 import { IconPlus, IconRefresh, IconSearch } from '../../components/common/icons';
 import { Badge } from '../../components/ui/Badge';
@@ -18,11 +19,11 @@ import { isSuperAdmin } from '../../lib/roles';
 import { DEFAULT_PAGE_SIZE, type PageSize, type SortOrder } from '../../types/pagination';
 import type { ProjectRecord } from '../../types/project';
 import { SyncActiveCollabModal } from './components/SyncActiveCollabModal';
+import { SyncProjectModal } from './components/SyncProjectModal';
 import { formatSyncedAt, sortProjects } from './utils/projects';
 
 export function ProjectsPage() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { user } = useAuth();
   const archiveProject = useArchiveProjectMutation();
   const superAdmin = isSuperAdmin(user?.role);
@@ -31,26 +32,16 @@ export function ProjectsPage() {
   const [pageSize, setPageSize] = useState<PageSize>(DEFAULT_PAGE_SIZE);
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [showSync, setShowSync] = useState(false);
+  const [projectToSync, setProjectToSync] = useState<ProjectRecord | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [projectToDelete, setProjectToDelete] = useState<ProjectRecord | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const { data, isPending, isError, error } = useProjectsQuery(search);
 
-  useEffect(() => {
-    const message = (location.state as { message?: string } | null)?.message;
-    if (message) {
-      setSyncMessage(message);
-      navigate(location.pathname, { replace: true, state: null });
-    }
-  }, [location.pathname, location.state, navigate]);
-
   const projects = data?.projects ?? [];
-  const loadError = isError
-    ? getApiErrorMessage(error, 'Failed to load projects')
-    : null;
+  const loadError = isError ? getApiErrorMessage(error, 'Failed to load projects') : null;
 
   const sortedProjects = useMemo(
     () => sortProjects(projects, sortBy, sortOrder),
@@ -79,7 +70,6 @@ export function ProjectsPage() {
   }, []);
 
   function handleOpenSync() {
-    setSyncMessage(null);
     setActionError(null);
     setShowSync(true);
   }
@@ -92,7 +82,7 @@ export function ProjectsPage() {
       try {
         await archiveProject.mutateAsync(project.id);
         setProjectToDelete(null);
-        setSyncMessage(`Deleted "${project.name}".`);
+        toast.success(`Deleted "${project.name}".`);
       } catch (err) {
         setActionError(getApiErrorMessage(err, 'Failed to delete project'));
       } finally {
@@ -104,77 +94,108 @@ export function ProjectsPage() {
 
   const columns: DataTableColumn<ProjectRecord>[] = useMemo(
     () => [
-    {
-      id: 'name',
-      header: 'Name',
-      width: 25,
-      align: 'left',
-      sortable: true,
-      cell: (project) => (
-        <>
+      {
+        id: 'name',
+        header: 'Name',
+        width: 25,
+        align: 'left',
+        sortable: true,
+        cell: (project) => (
           <div className="font-medium text-heading">{project.name}</div>
-          {project.clientName && (
-            <p className="mt-0.5 text-xs text-faint">{project.clientName}</p>
-          )}
-        </>
-      ),
-    },
-    {
-      id: 'acProjectId',
-      header: 'AC ID',
-      width: 15,
-      sortable: true,
-      cell: (project) => <span className="text-muted">{project.acProjectId}</span>,
-    },
-    {
-      id: 'clientEmail',
-      header: 'Client email',
-      width: 25,
-      align: 'left',
-      sortable: true,
-      cell: (project) =>
-        project.clientEmail ? (
-          <span className="text-body">{project.clientEmail}</span>
-        ) : (
-          <Badge variant="warning">Missing</Badge>
         ),
-    },
-    {
-      id: 'lastSyncedAt',
-      header: 'Last synced',
-      width: 20,
-      sortable: true,
-      cell: (project) => (
-        <span className="text-muted">{formatSyncedAt(project.lastSyncedAt)}</span>
-      ),
-    },
-    {
-      id: 'actions',
-      header: 'Actions',
-      width: 15,
-      cell: (project) => (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => navigate(`/projects/${project.id}`)}
-          >
-            Edit
-          </Button>
-          {superAdmin ? (
+      },
+      {
+        id: 'acProjectId',
+        header: 'AC project ID',
+        width: 12,
+        align: 'center',
+        sortable: true,
+        cell: (project) => <span className="text-muted">{project.acProjectId}</span>,
+      },
+      {
+        id: 'clientEmail',
+        header: 'Client',
+        width: 25,
+        align: 'left',
+        sortable: true,
+        cell: (project) => {
+          if (!project.clientName && !project.clientEmail) {
+            return <Badge variant="warning">Missing</Badge>;
+          }
+
+          return (
+            <>
+              {project.clientName && (
+                <div className="font-medium text-heading">{project.clientName}</div>
+              )}
+              {project.clientEmail ? (
+                <p
+                  className={
+                    project.clientName
+                      ? 'mt-0.5 text-xs text-faint'
+                      : 'font-medium text-heading'
+                  }
+                >
+                  {project.clientEmail}
+                </p>
+              ) : (
+                <div className={project.clientName ? 'mt-1' : undefined}>
+                  <Badge variant="warning">Missing email</Badge>
+                </div>
+              )}
+            </>
+          );
+        },
+      },
+      {
+        id: 'lastSyncedAt',
+        header: 'Last synced',
+        width: 12,
+        align: 'left',
+        sortable: true,
+        cell: (project) => (
+          <span className="text-muted">{formatSyncedAt(project.lastSyncedAt)}</span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        width: 26,
+        align: 'right',
+        cell: (project) => (
+          <div className="flex flex-wrap gap-2">
             <Button
-              variant="danger"
+              variant="secondary"
               size="sm"
-              disabled={deletingId === project.id}
-              onClick={() => setProjectToDelete(project)}
+              onClick={() => {
+                setActionError(null);
+                setProjectToSync(project);
+              }}
             >
-              {deletingId === project.id ? 'Deleting…' : 'Delete'}
+              <IconRefresh width={14} height={14} />
+              Sync
             </Button>
-          ) : null}
-        </div>
-      ),
-    },
-  ],
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => navigate(`/projects/${project.id}`)}
+            >
+              Edit
+            </Button>
+            {superAdmin ? (
+              <Button
+                variant="danger"
+                size="sm"
+                disabled={deletingId === project.id}
+                onClick={() => setProjectToDelete(project)}
+              >
+                {deletingId === project.id ? 'Deleting…' : 'Delete'}
+              </Button>
+            ) : null}
+          </div>
+        ),
+      },
+    ],
     [deletingId, navigate, superAdmin],
   );
 
@@ -201,13 +222,7 @@ export function ProjectsPage() {
         }
       />
 
-      {syncMessage && (
-        <p className="mb-4 text-sm text-emerald-400">{syncMessage}</p>
-      )}
-
-      {actionError && (
-        <p className="mb-4 text-sm text-red-400">{actionError}</p>
-      )}
+      {actionError && <p className="mb-4 text-sm text-red-400">{actionError}</p>}
 
       <Card padding={false}>
         <DataTable
@@ -252,9 +267,6 @@ export function ProjectsPage() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-medium text-heading">{project.name}</p>
-                  {project.clientName && (
-                    <p className="mt-0.5 text-xs text-faint">{project.clientName}</p>
-                  )}
                   <p className="mt-2 text-xs text-muted">AC ID: {project.acProjectId}</p>
                 </div>
                 {project.clientEmail ? (
@@ -263,13 +275,38 @@ export function ProjectsPage() {
                   <Badge variant="warning">Missing email</Badge>
                 )}
               </div>
-              <p className="mt-3 truncate text-sm text-muted">
-                {project.clientEmail || 'No client email'}
-              </p>
-              <p className="mt-1 text-xs text-faint">
-                {formatSyncedAt(project.lastSyncedAt)}
-              </p>
+              <div className="mt-3 min-w-0">
+                {project.clientName && (
+                  <p className="font-medium text-heading">{project.clientName}</p>
+                )}
+                {project.clientEmail ? (
+                  <p
+                    className={
+                      project.clientName
+                        ? 'mt-0.5 truncate text-xs text-faint'
+                        : 'truncate text-sm text-muted'
+                    }
+                  >
+                    {project.clientEmail}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted">No client email</p>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-faint">{formatSyncedAt(project.lastSyncedAt)}</p>
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full sm:flex-1"
+                  onClick={() => {
+                    setActionError(null);
+                    setProjectToSync(project);
+                  }}
+                >
+                  <IconRefresh width={14} height={14} />
+                  Sync
+                </Button>
                 <Button
                   variant="secondary"
                   size="sm"
@@ -295,10 +332,18 @@ export function ProjectsPage() {
         />
       </Card>
 
+      {projectToSync && (
+        <SyncProjectModal
+          project={projectToSync}
+          onClose={() => setProjectToSync(null)}
+          onSynced={(message) => toast.success(message)}
+        />
+      )}
+
       {showSync && (
         <SyncActiveCollabModal
           onClose={() => setShowSync(false)}
-          onSynced={(message) => setSyncMessage(message)}
+          onSynced={(message) => toast.success(message)}
         />
       )}
 

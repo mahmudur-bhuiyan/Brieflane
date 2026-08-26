@@ -9,6 +9,7 @@ import {
   useChangePasswordMutation,
   useUpdateProfileMutation,
 } from '../../../lib/queries/auth';
+import { toast } from '../../../lib/toast';
 
 import {
   createProfileFormState,
@@ -51,6 +52,7 @@ export function ProfileEditModal({ user, onClose }: { user: AuthUser; onClose: (
         });
       }
 
+      toast.success('Profile updated.');
       onClose();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to update profile'));

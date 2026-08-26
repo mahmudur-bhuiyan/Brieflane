@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '../../components/layout/AppLayout';
 import {
+  IconArrowLeft,
   IconFolder,
   IconPlus,
   IconSearch,
@@ -21,8 +22,8 @@ import {
   useProjectsQuery,
   useSearchAcProjectsMutation,
 } from '../../lib/queries/projects';
+import { toast } from '../../lib/toast';
 import type { AcProjectSearchResult, ActiveCollabCredentials } from '../../types/project';
-import { PageBackLink } from './components/PageBackLink';
 
 export function SearchActiveCollabPage() {
   const navigate = useNavigate();
@@ -37,7 +38,6 @@ export function SearchActiveCollabPage() {
     projectName: '',
   }));
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [results, setResults] = useState<AcProjectSearchResult[]>([]);
   const [resultFilter, setResultFilter] = useState('');
   const [lastSearch, setLastSearch] = useState<string | null>(null);
@@ -66,7 +66,6 @@ export function SearchActiveCollabPage() {
 
   async function runSearch(projectName: string) {
     setError(null);
-    setSuccessMessage(null);
     setRowErrors({});
 
     const username = form.username.trim();
@@ -113,7 +112,6 @@ export function SearchActiveCollabPage() {
       return next;
     });
     setAddingId(project.id);
-    setSuccessMessage(null);
 
     try {
       await createProject.mutateAsync({
@@ -122,7 +120,7 @@ export function SearchActiveCollabPage() {
       });
 
       setAddedIds((prev) => new Set(prev).add(project.id));
-      setSuccessMessage(`Added "${project.name}" to your project list.`);
+      toast.success(`Added "${project.name}" to your project list.`);
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         setAddedIds((prev) => new Set(prev).add(project.id));
@@ -147,10 +145,6 @@ export function SearchActiveCollabPage() {
       title="Search ActiveCollab"
       description="Find projects in ActiveCollab and add them to Brieflane."
     >
-      <div className="mb-6">
-        <PageBackLink to="/projects" label="Back to projects" />
-      </div>
-
       <PageHeader
         title="Search & add projects"
         description="Connect with ActiveCollab, search by name, and import projects into Brieflane."
@@ -174,12 +168,6 @@ export function SearchActiveCollabPage() {
         </div>
       </div>
 
-      {successMessage && (
-        <p className="mb-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
-          {successMessage}
-        </p>
-      )}
-
       <div className="grid gap-6 xl:grid-cols-[minmax(0,26rem)_1fr]">
         <Card className="h-fit xl:sticky xl:top-6">
           <div className="mb-5">
@@ -188,25 +176,23 @@ export function SearchActiveCollabPage() {
           </div>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Email or username"
-                type="text"
-                required
-                autoComplete="username"
-                icon={<IconUser width={16} height={16} />}
-                value={form.username}
-                onChange={(e) => setForm((prev) => ({ ...prev, username: e.target.value }))}
-              />
-              <Input
-                label="Password"
-                type="password"
-                required
-                autoComplete="current-password"
-                value={form.password}
-                onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
-              />
-            </div>
+            <Input
+              label="Email or username"
+              type="text"
+              required
+              autoComplete="username"
+              icon={<IconUser width={16} height={16} />}
+              value={form.username}
+              onChange={(e) => setForm((prev) => ({ ...prev, username: e.target.value }))}
+            />
+            <Input
+              label="Password"
+              type="password"
+              required
+              autoComplete="current-password"
+              value={form.password}
+              onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
+            />
             <Input
               label="Project name"
               type="text"
@@ -244,19 +230,30 @@ export function SearchActiveCollabPage() {
                       : `${results.length} result${results.length === 1 ? '' : 's'} for “${lastSearch}”`}
                 </p>
               </div>
-              {results.length > 0 && (
-                <div className="w-full sm:max-w-xs">
-                  <Input
-                    label="Filter results"
-                    hideLabel
-                    type="search"
-                    icon={<IconSearch width={16} height={16} />}
-                    value={resultFilter}
-                    onChange={(e) => setResultFilter(e.target.value)}
-                    placeholder="Filter by name or AC ID…"
-                  />
-                </div>
-              )}
+              <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+                {results.length > 0 && (
+                  <div className="w-full sm:max-w-xs">
+                    <Input
+                      label="Filter results"
+                      hideLabel
+                      type="search"
+                      icon={<IconSearch width={16} height={16} />}
+                      value={resultFilter}
+                      onChange={(e) => setResultFilter(e.target.value)}
+                      placeholder="Filter by name or AC ID…"
+                    />
+                  </div>
+                )}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => navigate('/projects')}
+                  className="w-full shrink-0 sm:w-auto"
+                >
+                  <IconArrowLeft width={16} height={16} />
+                  Back to projects
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -318,12 +315,6 @@ export function SearchActiveCollabPage() {
             )}
           </div>
         </Card>
-      </div>
-
-      <div className="mt-6 flex justify-end">
-        <Button variant="secondary" onClick={() => navigate('/projects')}>
-          Done
-        </Button>
       </div>
     </AppLayout>
   );

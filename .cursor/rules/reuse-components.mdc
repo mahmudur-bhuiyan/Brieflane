@@ -16,7 +16,7 @@ Brieflane pages compose shared components from typed folders under `client/src/c
 | Layout | `client/src/components/layout/` | `AppLayout` |
 | Routing guards | `client/src/components/routing/` | `ProtectedRoute`, `SuperAdminRoute` |
 | Domain composites | `client/src/components/domain/` | Shared feature UI used on 2+ pages (e.g. `ReportRunTable`) |
-| Common | `client/src/components/common/` | `icons`, `ThemeToggle` |
+| Common | `client/src/components/common/` | `icons`, `ThemeToggle`, `AppToaster` |
 | Page entry | `client/src/pages/<name>/<Name>Page.tsx` | One route entry per file — data fetching, routing, column definitions |
 | Page components | `client/src/pages/<name>/components/` | React UI only: modals, forms, sections used on that page |
 | Page utils | `client/src/pages/<name>/utils/` | Pure helpers: formatters, mappers, validators, sorters |
@@ -64,6 +64,8 @@ Register routes in `client/src/App.tsx`. Import shared layout from `components/l
 - Use `Modal` for confirmations and create/edit dialogs.
 - Use `Input` / `Select` / `Textarea` for form fields; `Button` for actions.
 - Import icons from `client/src/components/common/icons.tsx`.
+- **Success feedback** — use `toast.success('…')` from `client/src/lib/toast.ts`. Do not add inline success banners or `location.state.message` for navigation toasts.
+- **Errors** — keep inline in forms/modals near the field or submit area.
 
 ## Examples
 
@@ -116,4 +118,13 @@ import { CreateProjectModal } from './components/CreateProjectModal';
 // ✅ GOOD
 import { DataTable, type DataTableColumn } from '../../components/ui/DataTable';
 <DataTable columns={columns} rows={rows} … />
+```
+
+```tsx
+// ❌ BAD — inline success banner after save
+{saveMessage && <p className="text-emerald-400">{saveMessage}</p>}
+
+// ✅ GOOD
+import { toast } from '../../lib/toast';
+toast.success('Project saved.');
 ```

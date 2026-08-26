@@ -14,6 +14,7 @@ import {
   useDeactivateUserMutation,
   useUsersQuery,
 } from '../../lib/queries/users';
+import { toast } from '../../lib/toast';
 import { formatRole } from '../../lib/roles';
 import { DEFAULT_PAGE_SIZE, type PageSize, type SortOrder } from '../../types/pagination';
 import type { UserRecord } from '../../types/user';
@@ -28,7 +29,12 @@ export function UsersPage() {
   const [deactivateError, setDeactivateError] = useState<string | null>(null);
   const [userToDeactivate, setUserToDeactivate] = useState<UserRecord | null>(null);
 
-  const { data, isPending, isError, error: loadError } = useUsersQuery({
+  const {
+    data,
+    isPending,
+    isError,
+    error: loadError,
+  } = useUsersQuery({
     search: search || undefined,
     page,
     pageSize,
@@ -79,6 +85,7 @@ export function UsersPage() {
     try {
       await deactivateUser.mutateAsync(userToDeactivate.id);
       setUserToDeactivate(null);
+      toast.success('User deactivated.');
     } catch (err) {
       setDeactivateError(getApiErrorMessage(err, 'Failed to deactivate user'));
     }
@@ -124,12 +131,8 @@ export function UsersPage() {
       header: 'Actions',
       width: 20,
       cell: (user) => (
-        <div className="flex flex-wrap justify-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => navigate(`/users/${user.id}/edit`)}
-          >
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" size="sm" onClick={() => navigate(`/users/${user.id}/edit`)}>
             Edit
           </Button>
           {user.status === 'ACTIVE' && (
