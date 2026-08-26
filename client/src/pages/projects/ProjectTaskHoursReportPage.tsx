@@ -9,6 +9,8 @@ import { useAuth } from '../../context/AuthContext';
 import { getApiErrorMessage, useProjectQuery } from '../../lib/queries/projects';
 import { PageBackLink } from './components/PageBackLink';
 import { TaskHoursReportView } from './components/TaskHoursReportView';
+import type { CustomHoursEntry } from './types/customHours';
+import { getStoredCustomHours } from './utils/customHoursStorage';
 import { getStoredTaskHours } from './utils/taskHoursStorage';
 import { buildTaskHoursEmailReport } from './utils/taskHoursReport';
 
@@ -20,21 +22,29 @@ export function ProjectTaskHoursReportPage() {
   const project = data?.project;
 
   const [responseData, setResponseData] = useState<unknown | null>(null);
+  const [customHours, setCustomHours] = useState<CustomHoursEntry[]>([]);
 
   const reportPayload = useMemo(() => {
     if (!responseData || !user) {
       return null;
     }
 
-    return buildTaskHoursEmailReport(responseData, {
-      name: user.name?.trim() || user.email,
-      email: user.email,
-    }, { clientName: project?.clientName });
-  }, [responseData, user, project?.clientName]);
+    return buildTaskHoursEmailReport(
+      responseData,
+      {
+        name: user.name?.trim() || user.email,
+        email: user.email,
+        designation: user.designation,
+      },
+      { clientName: project?.clientName },
+      customHours,
+    );
+  }, [responseData, user, project?.clientName, customHours]);
 
   useEffect(() => {
     if (!id) return;
     setResponseData(getStoredTaskHours(id));
+    setCustomHours(getStoredCustomHours(id));
   }, [id]);
 
   if (!id) {
@@ -76,7 +86,7 @@ export function ProjectTaskHoursReportPage() {
 
       <PageHeader
         title="Generate report"
-        description="Review the email template preview and export the structured report JSON."
+        description="Choose the prebuilt email layout or build a custom template before sending."
         action={
           <div className="flex w-full flex-col gap-2 sm:flex-row md:w-auto">
             <Button

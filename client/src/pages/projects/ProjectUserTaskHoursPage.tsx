@@ -9,6 +9,8 @@ import { useAuth } from '../../context/AuthContext';
 import { getApiErrorMessage, useProjectQuery } from '../../lib/queries/projects';
 import { FetchTaskHoursModal } from './components/FetchTaskHoursModal';
 import { TaskHoursResponseView } from './components/TaskHoursResponseView';
+import type { CustomHoursEntry } from './types/customHours';
+import { getStoredCustomHours, saveCustomHours } from './utils/customHoursStorage';
 import { getStoredTaskHours, saveTaskHours } from './utils/taskHoursStorage';
 import { buildTaskHoursEmailReport } from './utils/taskHoursReport';
 
@@ -21,6 +23,7 @@ export function ProjectUserTaskHoursPage() {
 
   const [showFetch, setShowFetch] = useState(false);
   const [responseData, setResponseData] = useState<unknown | null>(null);
+  const [customHours, setCustomHours] = useState<CustomHoursEntry[]>([]);
 
   const hasFetchedData = responseData !== null;
   const fetchButtonLabel = hasFetchedData ? 'Refetch task hours' : 'Fetch task hours';
@@ -30,19 +33,35 @@ export function ProjectUserTaskHoursPage() {
       return null;
     }
 
-    return buildTaskHoursEmailReport(responseData, {
-      name: user.name?.trim() || user.email,
-      email: user.email,
-    }, { clientName: project?.clientName });
-  }, [responseData, user, project?.clientName]);
+    return buildTaskHoursEmailReport(
+      responseData,
+      {
+        name: user.name?.trim() || user.email,
+        email: user.email,
+        designation: user.designation,
+      },
+      { clientName: project?.clientName },
+      customHours,
+    );
+  }, [responseData, user, project?.clientName, customHours]);
 
   useEffect(() => {
     if (!id) return;
 
     const stored = getStoredTaskHours(id);
     setResponseData(stored);
+    setCustomHours(getStoredCustomHours(id));
     setShowFetch(stored === null);
   }, [id]);
+
+  function handleCustomHoursChange(entries: CustomHoursEntry[]) {
+    if (!id) {
+      return;
+    }
+
+    setCustomHours(entries);
+    saveCustomHours(id, entries);
+  }
 
   function handleFetched(data: unknown) {
     if (id) {
@@ -129,7 +148,12 @@ export function ProjectUserTaskHoursPage() {
             </Button>
           </div>
         ) : (
-          <TaskHoursResponseView data={responseData} />
+          <TaskHoursResponseView
+            data={responseData}
+            customHours={customHours}
+            onCustomHoursChange={handleCustomHoursChange}
+            defaultUserName={user?.name?.trim() || user?.email}
+          />
         )}
       </Card>
 

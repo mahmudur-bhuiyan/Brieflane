@@ -6,6 +6,7 @@ const superAdmin = {
   id: 'sa1',
   email: 'admin@test.com',
   name: 'Admin',
+  designation: null,
   role: 'SUPER_ADMIN' as const,
 };
 
@@ -13,6 +14,7 @@ const projectManager = {
   id: 'pm1',
   email: 'pm@test.com',
   name: 'PM',
+  designation: null,
   role: 'PROJECT_MANAGER' as const,
 };
 

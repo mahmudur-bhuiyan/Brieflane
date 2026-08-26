@@ -663,6 +663,75 @@ export function parseTaskHoursTable(data: unknown): ParsedTaskHoursTable {
   return { columns, rows };
 }
 
+function getRowBillableStatus(row: TaskHoursTableRow): string {
+  return (row.values.status ?? row.values.billable_status ?? '').trim().toLowerCase();
+}
+
+export function isNonBillableTaskHoursRow(row: TaskHoursTableRow): boolean {
+  return getRowBillableStatus(row) === 'non-billable';
+}
+
+export function filterTaskHoursRowsByBillableStatus(
+  rows: TaskHoursTableRow[],
+  showNonBillable: boolean,
+): TaskHoursTableRow[] {
+  if (showNonBillable) {
+    return rows;
+  }
+
+  return rows.filter((row) => !isNonBillableTaskHoursRow(row));
+}
+
+export function getBillableOnlySummary(summary: TaskHoursSummary): TaskHoursSummary {
+  return {
+    ...summary,
+    totalLoggedHours: summary.totalBillableHours,
+  };
+}
+
+export function mergeCustomHoursIntoSummary(
+  summary: TaskHoursSummary,
+  additionalBillableHours: number,
+): TaskHoursSummary {
+  if (additionalBillableHours <= 0) {
+    return summary;
+  }
+
+  const billable = parseHoursNumber(summary.totalBillableHours) + additionalBillableHours;
+  const nonBillable = parseHoursNumber(summary.totalNonBillableHours);
+  const loggedFromSummary = parseHoursNumber(summary.totalLoggedHours);
+  const logged =
+    loggedFromSummary > 0 ? loggedFromSummary + additionalBillableHours : billable + nonBillable;
+
+  return {
+    ...summary,
+    totalBillableHours: formatDecimalHours(billable),
+    totalLoggedHours: formatDecimalHours(logged),
+  };
+}
+
+export function customHoursToTableRows(
+  entries: Array<{
+    id: string;
+    userName: string;
+    jobType: string;
+    description: string;
+    hours: number;
+  }>,
+): TaskHoursTableRow[] {
+  return entries.map((entry) => ({
+    id: `custom-${entry.id}`,
+    values: {
+      user_name: entry.userName,
+      job_type: entry.jobType,
+      task_id: '—',
+      task_name: entry.description,
+      hours: formatDecimalHours(entry.hours),
+      status: 'Billable',
+    },
+  }));
+}
+
 export function filterTaskHoursRows(
   rows: TaskHoursTableRow[],
   search: string,

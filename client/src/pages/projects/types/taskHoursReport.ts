@@ -33,6 +33,7 @@ export type TaskBreakdownRow = {
 export type TaskHoursReportSignature = {
   name: string;
   email: string;
+  designation?: string | null;
 };
 
 export type TaskHoursEmailReport = {

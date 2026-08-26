@@ -20,6 +20,7 @@ const user = {
   id: 'user_1',
   email: 'pm@test.com',
   name: 'PM',
+  designation: null,
   role: 'PROJECT_MANAGER' as const,
 };
 
