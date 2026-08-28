@@ -1,6 +1,7 @@
 export const APP_SETTING_KEYS = {
   activecollabBaseUrl: 'activecollab_base_url',
   n8nReportWebhookUrl: 'n8n_report_webhook_url',
+  n8nGmailDraftWebhookUrl: 'n8n_gmail_draft_webhook_url',
   n8nWebhookSecret: 'n8n_webhook_secret',
 } as const;
 

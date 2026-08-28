@@ -21,29 +21,16 @@ appSettingsRouter.put('/', async (req, res) => {
     return;
   }
 
-  const current = await getIntegrationSettings();
-  const { activecollabBaseUrl, n8nReportWebhookUrl, n8nWebhookSecret } = parsed.data;
+  const { activecollabBaseUrl, n8nWebhookSecret } = parsed.data;
 
   if (activecollabBaseUrl !== undefined && !activecollabBaseUrl.trim()) {
     res.status(400).json({ error: 'ActiveCollab base URL is required' });
     return;
   }
 
-  const isUpdatingN8n =
-    n8nReportWebhookUrl !== undefined || n8nWebhookSecret !== undefined;
-
-  if (isUpdatingN8n) {
-    const nextWebhookUrl = n8nReportWebhookUrl ?? current.n8nReportWebhookUrl;
-
-    if (!nextWebhookUrl.trim()) {
-      res.status(400).json({ error: 'n8n report webhook URL is required' });
-      return;
-    }
-
-    if (!n8nWebhookSecret && !current.n8nWebhookSecretConfigured) {
-      res.status(400).json({ error: 'n8n webhook secret is required' });
-      return;
-    }
+  if (n8nWebhookSecret !== undefined && !n8nWebhookSecret.trim()) {
+    res.status(400).json({ error: 'n8n webhook secret cannot be empty' });
+    return;
   }
 
   const settings = await updateIntegrationSettings(parsed.data, req.user!.id);

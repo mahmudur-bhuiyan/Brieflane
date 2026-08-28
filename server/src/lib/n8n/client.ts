@@ -1,4 +1,4 @@
-import { getN8nConfig } from '../app-settings.js';
+import { getN8nConfig, getN8nGmailDraftWebhookUrl } from '../app-settings.js';
 import { N8nError, type N8nWebhookPayload } from './types.js';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -47,63 +47,80 @@ export class N8nReportService {
   }
 
   async triggerReport(payload: N8nWebhookPayload): Promise<N8nTriggerResult> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    return postN8nWebhook(this.webhookUrl, payload, {
+      secret: this.webhookSecret,
+      timeoutMs: this.timeoutMs,
+    });
+  }
+}
+
+export async function postN8nWebhook(
+  webhookUrl: string,
+  payload: unknown,
+  options?: { secret?: string; timeoutMs?: number },
+): Promise<N8nTriggerResult> {
+  const controller = new AbortController();
+  const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    };
+
+    if (options?.secret) {
+      headers[SECRET_HEADER] = options.secret;
+    }
+
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    let body: unknown = null;
 
     try {
-      const response = await fetch(this.webhookUrl, {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          [SECRET_HEADER]: this.webhookSecret,
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
+      body = await response.json();
+    } catch {
+      // n8n may return empty body on success
+    }
 
-      let body: unknown = null;
-
-      try {
-        body = await response.json();
-      } catch {
-        // n8n may return empty body on success
-      }
-
-      if (!response.ok) {
-        const detail =
-          body && typeof body === 'object' && 'message' in body
-            ? String((body as { message: unknown }).message)
-            : null;
-
-        throw new N8nError(
-          detail ?? `n8n webhook rejected the request (${response.status})`,
-          response.status,
-          'api',
-        );
-      }
-
-      return {
-        statusCode: response.status,
-        n8nExecutionId: extractExecutionId(body),
-      };
-    } catch (error) {
-      if (error instanceof N8nError) {
-        throw error;
-      }
-
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new N8nError('n8n webhook request timed out', undefined, 'timeout');
-      }
+    if (!response.ok) {
+      const detail =
+        body && typeof body === 'object' && 'message' in body
+          ? String((body as { message: unknown }).message)
+          : null;
 
       throw new N8nError(
-        error instanceof Error ? error.message : 'n8n webhook request failed',
-        undefined,
+        detail ?? `n8n webhook rejected the request (${response.status})`,
+        response.status,
         'api',
       );
-    } finally {
-      clearTimeout(timeout);
     }
+
+    return {
+      statusCode: response.status,
+      n8nExecutionId: extractExecutionId(body),
+    };
+  } catch (error) {
+    if (error instanceof N8nError) {
+      throw error;
+    }
+
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new N8nError('n8n webhook request timed out', undefined, 'timeout');
+    }
+
+    throw new N8nError(
+      error instanceof Error ? error.message : 'n8n webhook request failed',
+      undefined,
+      'api',
+    );
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -131,4 +148,18 @@ export async function requireN8nReportService(): Promise<N8nReportService> {
   }
 
   return service;
+}
+
+export async function requireN8nGmailDraftWebhookUrl(): Promise<string> {
+  const webhookUrl = await getN8nGmailDraftWebhookUrl();
+
+  if (!webhookUrl) {
+    throw new N8nError(
+      'Gmail draft webhook is not configured. Set the Gmail draft webhook URL in Settings.',
+      undefined,
+      'config',
+    );
+  }
+
+  return webhookUrl;
 }

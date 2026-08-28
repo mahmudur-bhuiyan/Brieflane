@@ -57,19 +57,23 @@ async function writeSetting(key: AppSettingKey, value: string, updatedBy?: strin
 export type IntegrationSettingsResponse = {
   activecollabBaseUrl: string;
   n8nReportWebhookUrl: string;
+  n8nGmailDraftWebhookUrl: string;
   n8nWebhookSecretConfigured: boolean;
 };
 
 export async function getIntegrationSettings(): Promise<IntegrationSettingsResponse> {
-  const [activecollabBaseUrl, n8nReportWebhookUrl, n8nWebhookSecret] = await Promise.all([
-    readSetting(APP_SETTING_KEYS.activecollabBaseUrl),
-    readSetting(APP_SETTING_KEYS.n8nReportWebhookUrl),
-    readSetting(APP_SETTING_KEYS.n8nWebhookSecret),
-  ]);
+  const [activecollabBaseUrl, n8nReportWebhookUrl, n8nGmailDraftWebhookUrl, n8nWebhookSecret] =
+    await Promise.all([
+      readSetting(APP_SETTING_KEYS.activecollabBaseUrl),
+      readSetting(APP_SETTING_KEYS.n8nReportWebhookUrl),
+      readSetting(APP_SETTING_KEYS.n8nGmailDraftWebhookUrl),
+      readSetting(APP_SETTING_KEYS.n8nWebhookSecret),
+    ]);
 
   return {
     activecollabBaseUrl: activecollabBaseUrl ?? '',
     n8nReportWebhookUrl: n8nReportWebhookUrl ?? '',
+    n8nGmailDraftWebhookUrl: n8nGmailDraftWebhookUrl ?? '',
     n8nWebhookSecretConfigured: Boolean(n8nWebhookSecret),
   };
 }
@@ -78,6 +82,7 @@ export async function updateIntegrationSettings(
   input: {
     activecollabBaseUrl?: string;
     n8nReportWebhookUrl?: string;
+    n8nGmailDraftWebhookUrl?: string;
     n8nWebhookSecret?: string;
   },
   updatedBy: string,
@@ -88,6 +93,14 @@ export async function updateIntegrationSettings(
 
   if (input.n8nReportWebhookUrl !== undefined) {
     await writeSetting(APP_SETTING_KEYS.n8nReportWebhookUrl, input.n8nReportWebhookUrl, updatedBy);
+  }
+
+  if (input.n8nGmailDraftWebhookUrl !== undefined) {
+    await writeSetting(
+      APP_SETTING_KEYS.n8nGmailDraftWebhookUrl,
+      input.n8nGmailDraftWebhookUrl,
+      updatedBy,
+    );
   }
 
   if (input.n8nWebhookSecret) {
@@ -116,6 +129,11 @@ export async function getN8nConfig(): Promise<{ webhookUrl: string; webhookSecre
     webhookUrl: webhookUrl.trim(),
     webhookSecret: webhookSecret.trim(),
   };
+}
+
+export async function getN8nGmailDraftWebhookUrl(): Promise<string | null> {
+  const value = await readSetting(APP_SETTING_KEYS.n8nGmailDraftWebhookUrl);
+  return value?.trim() || null;
 }
 
 export function resetAppSettingsCacheForTests(): void {
