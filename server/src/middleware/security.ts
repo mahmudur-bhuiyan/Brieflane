@@ -1,6 +1,8 @@
 import cors from 'cors';
 import type { Express } from 'express';
-import helmet from 'helmet';
+import * as helmetImport from 'helmet';
+
+const helmet = helmetImport.default;
 
 export function applySecurityMiddleware(app: Express, webOrigin: string) {
   app.use(
