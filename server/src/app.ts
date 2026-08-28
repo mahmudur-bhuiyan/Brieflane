@@ -8,6 +8,7 @@ import { reportRunsRouter } from './routes/report-runs.js';
 import { getDashboardReportStats } from './lib/dashboard.js';
 import { authMiddleware } from './middleware/auth.js';
 import { requireRoles } from './middleware/requireRoles.js';
+import { appSettingsRouter } from './routes/app-settings.js';
 import { applySecurityMiddleware } from './middleware/security.js';
 
 export function createApp() {
@@ -58,6 +59,8 @@ export function createApp() {
   app.get('/api/admin/ping', authMiddleware, requireRoles('SUPER_ADMIN'), (_req, res) => {
     res.json({ ok: true });
   });
+
+  app.use('/api/admin/settings', appSettingsRouter);
 
   app.use('/api/users', usersRouter);
   app.use('/api/projects', projectsRouter);

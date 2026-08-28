@@ -35,6 +35,7 @@ export type ChangePasswordInput = {
 export type ActiveCollabCredentialsResponse = {
   username: string | null;
   configured: boolean;
+  needsResave: boolean;
 };
 
 export type UpdateActiveCollabCredentialsInput = {

@@ -274,7 +274,6 @@ export function ProjectsPage() {
 
 ```env
 # App
-NODE_ENV=production
 PORT=4000
 JWT_SECRET=...
 WEB_ORIGIN=https://brieflane.yourdomain.com

@@ -24,4 +24,7 @@ export const queryKeys = {
     list: (params: { projectId?: string; status?: string; limit?: number }) =>
       ['reportRuns', 'list', params] as const,
   },
+  settings: {
+    integration: ['settings', 'integration'] as const,
+  },
 };

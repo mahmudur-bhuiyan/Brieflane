@@ -7,6 +7,7 @@ import {
   IconLayoutDashboard,
   IconLogOut,
   IconMenu,
+  IconSettings,
   IconShield,
   IconUser,
   IconUsers,
@@ -36,6 +37,7 @@ const navItems: NavItem[] = [
   { to: '/users', label: 'Users', icon: <IconUsers />, adminOnly: true },
   { to: '/projects', label: 'Projects', icon: <IconFolder /> },
   { to: '/profile', label: 'Profile', icon: <IconUser /> },
+  { to: '/settings', label: 'Settings', icon: <IconSettings />, adminOnly: true },
 ];
 
 function BrandMark() {

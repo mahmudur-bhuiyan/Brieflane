@@ -93,9 +93,11 @@ export function ProfilePage() {
               <span>{formatRole(user.role)}</span>
             </span>
             <Badge variant="success">Active session</Badge>
-            {acCredentials?.configured && (
+            {acCredentials?.needsResave ? (
+              <Badge variant="warning">ActiveCollab needs re-save</Badge>
+            ) : acCredentials?.configured ? (
               <Badge variant="accent">ActiveCollab configured</Badge>
-            )}
+            ) : null}
           </div>
 
           <div className="mt-8 grid gap-4 md:grid-cols-2">

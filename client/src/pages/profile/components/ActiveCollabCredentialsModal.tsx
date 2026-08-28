@@ -30,6 +30,7 @@ export function ActiveCollabCredentialsModal({
 
   const saved = credentialsQuery.data;
   const configured = saved?.configured ?? false;
+  const needsResave = saved?.needsResave ?? false;
 
   const [form, setForm] = useState(() => createActiveCollabCredentialsFormState(user));
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +66,7 @@ export function ActiveCollabCredentialsModal({
 
     setError(null);
 
-    const validation = validateActiveCollabCredentialsForm(form, configured);
+    const validation = validateActiveCollabCredentialsForm(form, saved);
     if (!validation.ok) {
       setError(validation.error);
       return;
@@ -93,6 +94,12 @@ export function ActiveCollabCredentialsModal({
         <p className="text-sm text-muted">Loading credentials…</p>
       ) : (
         <form className="space-y-5" onSubmit={handleSubmit}>
+          {needsResave && (
+            <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+              Your saved ActiveCollab password could not be read. Enter it again to restore access.
+            </p>
+          )}
+
           <Input
             label="Email or username"
             type="text"
@@ -107,7 +114,7 @@ export function ActiveCollabCredentialsModal({
             <Input
               label="Password"
               type="password"
-              required={!configured}
+              required={!configured || needsResave}
               autoComplete="current-password"
               value={form.password}
               onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
@@ -118,9 +125,11 @@ export function ActiveCollabCredentialsModal({
               }}
             />
             <p className="mt-1.5 text-xs text-muted">
-              {configured
-                ? 'Replace the masked password only if you want to change it.'
-                : 'Enter your ActiveCollab password.'}
+              {needsResave
+                ? 'Enter your ActiveCollab password again.'
+                : configured
+                  ? 'Replace the masked password only if you want to change it.'
+                  : 'Enter your ActiveCollab password.'}
             </p>
           </div>
 
