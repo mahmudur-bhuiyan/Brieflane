@@ -13,6 +13,7 @@ import { CreateProjectPage } from './pages/projects/CreateProjectPage';
 import { UsersPage } from './pages/users/UsersPage';
 import { CreateUserPage } from './pages/users/CreateUserPage';
 import { EditUserPage } from './pages/users/EditUserPage';
+import { SettingsPage } from './pages/settings/SettingsPage';
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
         <Route path="/users" element={<UsersPage />} />
         <Route path="/users/new" element={<CreateUserPage />} />
         <Route path="/users/:id/edit" element={<EditUserPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
       </Route>
 
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

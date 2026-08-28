@@ -39,6 +39,7 @@ export function SearchActiveCollabPage() {
 
   const savedCredentials = credentialsQuery.data;
   const hasSavedCredentials = savedCredentials?.configured ?? false;
+  const needsCredentialResave = savedCredentials?.needsResave ?? false;
 
   const [useSavedCredentials, setUseSavedCredentials] = useState(false);
   const [form, setForm] = useState<ActiveCollabCredentials & { projectName: string }>(() => ({
@@ -55,7 +56,10 @@ export function SearchActiveCollabPage() {
   const [rowErrors, setRowErrors] = useState<Record<number, string>>({});
 
   useEffect(() => {
-    if (!hasSavedCredentials || !savedCredentials) {
+    if (!hasSavedCredentials || needsCredentialResave || !savedCredentials) {
+      if (needsCredentialResave) {
+        setUseSavedCredentials(false);
+      }
       return;
     }
 
@@ -65,7 +69,7 @@ export function SearchActiveCollabPage() {
       username: savedCredentials.username?.trim() || user?.email || prev.username,
       password: ACTIVE_COLLAB_PASSWORD_MASK,
     }));
-  }, [hasSavedCredentials, savedCredentials, user?.email]);
+  }, [hasSavedCredentials, needsCredentialResave, savedCredentials, user?.email]);
 
   const existingAcIds = useMemo(() => {
     const ids = new Set<number>();
@@ -124,7 +128,7 @@ export function SearchActiveCollabPage() {
 
     const username = form.username.trim();
 
-    if (!username || !form.password) {
+    if (!username || !form.password || form.password === ACTIVE_COLLAB_PASSWORD_MASK) {
       setError('Enter your ActiveCollab email or username and password');
       return;
     }
@@ -215,8 +219,6 @@ export function SearchActiveCollabPage() {
     }));
   }
 
-  const credentialsDisabled = useSavedCredentials && hasSavedCredentials;
-
   return (
     <AppLayout
       title="Search ActiveCollab"
@@ -236,9 +238,11 @@ export function SearchActiveCollabPage() {
             <div>
               <p className="text-sm font-medium text-heading">ActiveCollab import</p>
               <p className="mt-1 max-w-2xl text-sm text-muted">
-                {hasSavedCredentials
-                  ? 'Use your saved profile credentials or sign in manually for this search.'
-                  : 'Credentials are used only for this session. Add projects now and fill in client email later from the project list.'}
+                {needsCredentialResave
+                  ? 'Your saved ActiveCollab password needs to be re-entered in Profile before you can use saved credentials.'
+                  : hasSavedCredentials
+                    ? 'Use your saved profile credentials or sign in manually for this search.'
+                    : 'Credentials are used only for this session. Add projects now and fill in client email later from the project list.'}
               </p>
             </div>
           </div>
@@ -254,6 +258,20 @@ export function SearchActiveCollabPage() {
           </div>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
+            {needsCredentialResave && (
+              <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+                Re-save your ActiveCollab password in{' '}
+                <button
+                  type="button"
+                  className="font-medium underline"
+                  onClick={() => navigate('/profile')}
+                >
+                  Profile
+                </button>{' '}
+                or enter credentials manually below.
+              </p>
+            )}
+
             {hasSavedCredentials && (
               <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-subtle bg-subtle px-3 py-2.5">
                 <input
@@ -266,25 +284,27 @@ export function SearchActiveCollabPage() {
               </label>
             )}
 
-            <Input
-              label="Email or username"
-              type="text"
-              required={!credentialsDisabled}
-              disabled={credentialsDisabled}
-              autoComplete="username"
-              icon={<IconUser width={16} height={16} />}
-              value={form.username}
-              onChange={(e) => setForm((prev) => ({ ...prev, username: e.target.value }))}
-            />
-            <Input
-              label="Password"
-              type="password"
-              required={!credentialsDisabled}
-              disabled={credentialsDisabled}
-              autoComplete="current-password"
-              value={form.password}
-              onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
-            />
+            {!useSavedCredentials && (
+              <>
+                <Input
+                  label="Email or username"
+                  type="text"
+                  required
+                  autoComplete="username"
+                  icon={<IconUser width={16} height={16} />}
+                  value={form.username}
+                  onChange={(e) => setForm((prev) => ({ ...prev, username: e.target.value }))}
+                />
+                <Input
+                  label="Password"
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                  value={form.password}
+                  onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
+                />
+              </>
+            )}
             <Input
               label="Project name"
               type="text"

@@ -82,6 +82,15 @@ model Project {
   @@map("projects")
 }
 
+model AppSetting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedBy String?  @map("updated_by")
+
+  @@map("app_settings")
+}
+
 model ReportRun {
   id              String          @id @default(cuid())
   projectId       String          @map("project_id")

@@ -2,9 +2,44 @@ import { decryptSecret } from '../credentials-crypto.js';
 import { prisma } from '../prisma.js';
 import type { ActiveCollabCredentials } from '../../schemas/activecollab.js';
 
-export async function getStoredActiveCollabCredentials(
+export class StoredCredentialsError extends Error {
+  constructor(
+    message = 'Stored ActiveCollab credentials could not be read. Re-save them in your profile.',
+  ) {
+    super(message);
+    this.name = 'StoredCredentialsError';
+  }
+}
+
+export type StoredActiveCollabCredentialsState =
+  | { status: 'missing' }
+  | { status: 'unreadable'; username: string }
+  | { status: 'ready'; credentials: ActiveCollabCredentials };
+
+function resolveStoredActiveCollabCredentials(user: {
+  acUsername: string | null;
+  acPasswordEncrypted: string | null;
+}): StoredActiveCollabCredentialsState {
+  if (!user.acUsername?.trim() || !user.acPasswordEncrypted) {
+    return { status: 'missing' };
+  }
+
+  try {
+    return {
+      status: 'ready',
+      credentials: {
+        username: user.acUsername.trim(),
+        password: decryptSecret(user.acPasswordEncrypted),
+      },
+    };
+  } catch {
+    return { status: 'unreadable', username: user.acUsername.trim() };
+  }
+}
+
+export async function getStoredActiveCollabCredentialsState(
   userId: string,
-): Promise<ActiveCollabCredentials | null> {
+): Promise<StoredActiveCollabCredentialsState> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
@@ -13,12 +48,38 @@ export async function getStoredActiveCollabCredentials(
     },
   });
 
-  if (!user?.acUsername?.trim() || !user.acPasswordEncrypted) {
-    return null;
+  if (!user) {
+    return { status: 'missing' };
   }
 
-  return {
-    username: user.acUsername.trim(),
-    password: decryptSecret(user.acPasswordEncrypted),
-  };
+  return resolveStoredActiveCollabCredentials(user);
+}
+
+export async function getStoredActiveCollabCredentials(
+  userId: string,
+): Promise<ActiveCollabCredentials | null> {
+  const state = await getStoredActiveCollabCredentialsState(userId);
+
+  if (state.status === 'ready') {
+    return state.credentials;
+  }
+
+  if (state.status === 'unreadable') {
+    throw new StoredCredentialsError();
+  }
+
+  return null;
+}
+
+export function canDecryptStoredPassword(acPasswordEncrypted: string | null | undefined): boolean {
+  if (!acPasswordEncrypted) {
+    return false;
+  }
+
+  try {
+    decryptSecret(acPasswordEncrypted);
+    return true;
+  } catch {
+    return false;
+  }
 }

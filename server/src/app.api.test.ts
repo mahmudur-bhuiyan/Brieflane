@@ -48,14 +48,14 @@ vi.mock('./lib/prisma.js', () => ({
 }));
 
 vi.mock('./lib/activecollab/client.js', () => ({
-  createActiveCollabService: () => ({
+  createActiveCollabService: async () => ({
     listProjects: mocks.listProjects,
   }),
   isActiveCollabError: (error: unknown) => error instanceof Error && error.name === 'ActiveCollabError',
 }));
 
 vi.mock('./lib/n8n/client.js', () => ({
-  requireN8nReportService: () => ({
+  requireN8nReportService: async () => ({
     triggerReport: mocks.triggerReport,
   }),
   isN8nError: (error: unknown) => error instanceof N8nError,

@@ -1,4 +1,5 @@
 import type { ActiveCollabCredentials } from '../../schemas/activecollab.js';
+import { getActiveCollabBaseUrl } from '../app-settings.js';
 import { ActiveCollabError } from './types.js';
 
 const DEFAULT_TIMEOUT_MS = 15_000;
@@ -72,11 +73,11 @@ export async function searchActiveCollabProjects(
   credentials: ActiveCollabCredentials,
   projectName: string,
 ): Promise<AcProjectSearchResult[]> {
-  const baseUrl = process.env.ACTIVECOLLAB_BASE_URL?.trim();
+  const baseUrl = await getActiveCollabBaseUrl();
 
   if (!baseUrl) {
     throw new ActiveCollabError(
-      'ActiveCollab is not configured. Set ACTIVECOLLAB_BASE_URL.',
+      'ActiveCollab is not configured. Set the base URL in Settings.',
       undefined,
       'config',
     );
@@ -144,11 +145,11 @@ export async function fetchAcProjectUserTaskHours(
   credentials: ActiveCollabCredentials,
   params: { projectId: number; startDate: string; endDate: string },
 ): Promise<unknown> {
-  const baseUrl = process.env.ACTIVECOLLAB_BASE_URL?.trim();
+  const baseUrl = await getActiveCollabBaseUrl();
 
   if (!baseUrl) {
     throw new ActiveCollabError(
-      'ActiveCollab is not configured. Set ACTIVECOLLAB_BASE_URL.',
+      'ActiveCollab is not configured. Set the base URL in Settings.',
       undefined,
       'config',
     );

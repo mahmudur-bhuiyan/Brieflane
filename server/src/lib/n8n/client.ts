@@ -1,3 +1,4 @@
+import { getN8nConfig } from '../app-settings.js';
 import { N8nError, type N8nWebhookPayload } from './types.js';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -108,23 +109,22 @@ export class N8nReportService {
 
 export { N8nError, isN8nError } from './types.js';
 
-export function getN8nReportService(): N8nReportService | null {
-  const webhookUrl = process.env.N8N_REPORT_WEBHOOK_URL?.trim();
-  const webhookSecret = process.env.N8N_WEBHOOK_SECRET?.trim();
+export async function getN8nReportService(): Promise<N8nReportService | null> {
+  const config = await getN8nConfig();
 
-  if (!webhookUrl || !webhookSecret) {
+  if (!config) {
     return null;
   }
 
-  return new N8nReportService({ webhookUrl, webhookSecret });
+  return new N8nReportService(config);
 }
 
-export function requireN8nReportService(): N8nReportService {
-  const service = getN8nReportService();
+export async function requireN8nReportService(): Promise<N8nReportService> {
+  const service = await getN8nReportService();
 
   if (!service) {
     throw new N8nError(
-      'n8n is not configured. Set N8N_REPORT_WEBHOOK_URL and N8N_WEBHOOK_SECRET.',
+      'n8n is not configured. Set the webhook URL and secret in Settings.',
       undefined,
       'config',
     );

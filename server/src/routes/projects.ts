@@ -3,16 +3,17 @@ import { Router } from 'express';
 import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { toProjectRecord } from '../lib/projects.js';
+import { createActiveCollabService } from '../lib/activecollab/client.js';
 import {
-  createActiveCollabService,
-  isActiveCollabError,
-} from '../lib/activecollab/client.js';
+  getStoredActiveCollabCredentials,
+  StoredCredentialsError,
+} from '../lib/activecollab/credentials.js';
+import { isActiveCollabError } from '../lib/activecollab/types.js';
 import {
   activeCollabCredentialsSchema,
   activeCollabProjectSearchSchema,
   activeCollabTaskHoursRequestSchema,
 } from '../schemas/activecollab.js';
-import { getStoredActiveCollabCredentials } from '../lib/activecollab/credentials.js';
 import {
   fetchAcProjectUserTaskHours,
   searchActiveCollabProjects,
@@ -46,6 +47,11 @@ function toJsonValue(value: Record<string, unknown>): Prisma.InputJsonValue {
 }
 
 function handleActiveCollabError(error: unknown, res: Response) {
+  if (error instanceof StoredCredentialsError) {
+    res.status(400).json({ error: error.message });
+    return;
+  }
+
   if (!isActiveCollabError(error)) {
     res.status(500).json({ error: 'ActiveCollab request failed' });
     return;
@@ -102,7 +108,7 @@ projectsRouter.post('/sync', async (req, res) => {
   }
 
   try {
-    const service = createActiveCollabService(parsed.data);
+    const service = await createActiveCollabService(parsed.data);
     const acProjects = await service.listProjects({ skipCache: true });
     const now = new Date();
 
@@ -153,27 +159,27 @@ projectsRouter.post('/ac-task-hours', async (req, res) => {
     return;
   }
 
-  let credentials;
+  try {
+    let credentials;
 
-  if ('useSavedCredentials' in parsed.data) {
-    const stored = await getStoredActiveCollabCredentials(req.user!.id);
+    if ('useSavedCredentials' in parsed.data) {
+      const stored = await getStoredActiveCollabCredentials(req.user!.id);
 
-    if (!stored) {
-      res.status(400).json({
-        error: 'No saved ActiveCollab credentials found. Save them in your profile first.',
-      });
-      return;
+      if (!stored) {
+        res.status(400).json({
+          error: 'No saved ActiveCollab credentials found. Save them in your profile first.',
+        });
+        return;
+      }
+
+      credentials = stored;
+    } else {
+      credentials = {
+        username: parsed.data.username,
+        password: parsed.data.password,
+      };
     }
 
-    credentials = stored;
-  } else {
-    credentials = {
-      username: parsed.data.username,
-      password: parsed.data.password,
-    };
-  }
-
-  try {
     const data = await fetchAcProjectUserTaskHours(
       credentials,
       {
@@ -197,27 +203,27 @@ projectsRouter.post('/ac-search', async (req, res) => {
     return;
   }
 
-  let credentials;
+  try {
+    let credentials;
 
-  if ('useSavedCredentials' in parsed.data) {
-    const stored = await getStoredActiveCollabCredentials(req.user!.id);
+    if ('useSavedCredentials' in parsed.data) {
+      const stored = await getStoredActiveCollabCredentials(req.user!.id);
 
-    if (!stored) {
-      res.status(400).json({
-        error: 'No saved ActiveCollab credentials found. Save them in your profile first.',
-      });
-      return;
+      if (!stored) {
+        res.status(400).json({
+          error: 'No saved ActiveCollab credentials found. Save them in your profile first.',
+        });
+        return;
+      }
+
+      credentials = stored;
+    } else {
+      credentials = {
+        username: parsed.data.username,
+        password: parsed.data.password,
+      };
     }
 
-    credentials = stored;
-  } else {
-    credentials = {
-      username: parsed.data.username,
-      password: parsed.data.password,
-    };
-  }
-
-  try {
     const projects = await searchActiveCollabProjects(credentials, parsed.data.projectName);
 
     res.json({ projects, count: projects.length });
@@ -235,7 +241,7 @@ projectsRouter.post('/ac-preview', async (req, res) => {
   }
 
   try {
-    const service = createActiveCollabService(parsed.data);
+    const service = await createActiveCollabService(parsed.data);
     const skipCache = req.query.refresh === 'true';
     const projects = await service.listProjects({ skipCache });
 
@@ -265,7 +271,7 @@ projectsRouter.post('/ac-preview/:acProjectId', async (req, res) => {
   }
 
   try {
-    const service = createActiveCollabService(parsed.data);
+    const service = await createActiveCollabService(parsed.data);
     const project = await service.getProject(acProjectId);
 
     res.json({ project });
@@ -444,7 +450,7 @@ projectsRouter.post('/:id/generate-report', reportTriggerRateLimiter, async (req
   let n8nService;
 
   try {
-    n8nService = requireN8nReportService();
+    n8nService = await requireN8nReportService();
   } catch (error) {
     if (isN8nError(error) && error.code === 'config') {
       res.status(503).json({ error: error.message });

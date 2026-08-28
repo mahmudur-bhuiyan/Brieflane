@@ -8,6 +8,10 @@ import {
 import { prisma } from '../lib/prisma.js';
 import { hashPassword, signToken, toAuthUser, verifyPassword } from '../lib/auth.js';
 import { encryptSecret } from '../lib/credentials-crypto.js';
+import {
+  canDecryptStoredPassword,
+  getStoredActiveCollabCredentialsState,
+} from '../lib/activecollab/credentials.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { loginRateLimiter } from '../middleware/rate-limit.js';
 
@@ -124,22 +128,30 @@ authRouter.patch('/password', authMiddleware, async (req, res) => {
 });
 
 authRouter.get('/activecollab-credentials', authMiddleware, async (req, res) => {
-  const user = await prisma.user.findUnique({
-    where: { id: req.user!.id },
-    select: {
-      acUsername: true,
-      acPasswordEncrypted: true,
-    },
-  });
+  const state = await getStoredActiveCollabCredentialsState(req.user!.id);
 
-  if (!user) {
-    res.status(404).json({ error: 'User not found' });
+  if (state.status === 'ready') {
+    res.json({
+      username: state.credentials.username,
+      configured: true,
+      needsResave: false,
+    });
+    return;
+  }
+
+  if (state.status === 'unreadable') {
+    res.json({
+      username: state.username,
+      configured: false,
+      needsResave: true,
+    });
     return;
   }
 
   res.json({
-    username: user.acUsername,
-    configured: Boolean(user.acUsername && user.acPasswordEncrypted),
+    username: null,
+    configured: false,
+    needsResave: false,
   });
 });
 
@@ -164,9 +176,18 @@ authRouter.put('/activecollab-credentials', authMiddleware, async (req, res) => 
     return;
   }
 
-  if (!password && !existing.acPasswordEncrypted) {
-    res.status(400).json({ error: 'Password is required' });
-    return;
+  if (!password) {
+    const hasReadablePassword = canDecryptStoredPassword(existing.acPasswordEncrypted);
+
+    if (!existing.acPasswordEncrypted || !hasReadablePassword) {
+      res.status(400).json({
+        error:
+          !existing.acPasswordEncrypted
+            ? 'Password is required'
+            : 'Password is required because stored credentials could not be read',
+      });
+      return;
+    }
   }
 
   const data: { acUsername: string; acPasswordEncrypted?: string } = {
@@ -188,6 +209,7 @@ authRouter.put('/activecollab-credentials', authMiddleware, async (req, res) => 
 
   res.json({
     username: user.acUsername,
-    configured: Boolean(user.acUsername && user.acPasswordEncrypted),
+    configured: canDecryptStoredPassword(user.acPasswordEncrypted),
+    needsResave: Boolean(user.acPasswordEncrypted && !canDecryptStoredPassword(user.acPasswordEncrypted)),
   });
 });

@@ -1,3 +1,4 @@
+import { getActiveCollabBaseUrl } from '../app-settings.js';
 import type { ActiveCollabCredentials } from '../../schemas/activecollab.js';
 import {
   ActiveCollabError,
@@ -260,12 +261,14 @@ export class ActiveCollabService {
 
 export { ActiveCollabError, isActiveCollabError } from './types.js';
 
-export function createActiveCollabService(credentials: ActiveCollabCredentials): ActiveCollabService {
-  const baseUrl = process.env.ACTIVECOLLAB_BASE_URL?.trim();
+export async function createActiveCollabService(
+  credentials: ActiveCollabCredentials,
+): Promise<ActiveCollabService> {
+  const baseUrl = await getActiveCollabBaseUrl();
 
   if (!baseUrl) {
     throw new ActiveCollabError(
-      'ActiveCollab is not configured. Set ACTIVECOLLAB_BASE_URL.',
+      'ActiveCollab is not configured. Set the base URL in Settings.',
       undefined,
       'config',
     );
