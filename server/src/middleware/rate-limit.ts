@@ -1,4 +1,16 @@
-import rateLimit from 'express-rate-limit';
+import type { RequestHandler } from 'express';
+import rateLimitImport from 'express-rate-limit';
+
+// Same NodeNext/Vercel default-export typing issue as helmet (callable treated as namespace).
+type RateLimitFactory = (options: {
+  windowMs: number;
+  max: number;
+  standardHeaders: boolean;
+  legacyHeaders: boolean;
+  message: { error: string };
+}) => RequestHandler;
+
+const rateLimit = rateLimitImport as unknown as RateLimitFactory;
 
 const jsonError = (message: string) => ({ error: message });
 
