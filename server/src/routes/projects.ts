@@ -452,8 +452,8 @@ projectsRouter.post('/:id/task-hours/draft-gmail', reportTriggerRateLimiter, asy
   }
 
   const payload = {
-    emailTemplate: parsed.data.emailTemplate,
-    json: parsed.data.json,
+    email: parsed.data.email,
+    formattedData: parsed.data.formattedData,
     project: {
       id: project.id,
       name: project.name,

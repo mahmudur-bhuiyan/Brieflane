@@ -328,8 +328,11 @@ describe('API integration', () => {
       .post('/api/projects/proj_1/task-hours/draft-gmail')
       .set('Authorization', `Bearer ${token}`)
       .send({
-        emailTemplate: '<html>{{email.subject}}</html>',
-        json: reportJson,
+        email: {
+          template: '<html>{{email.subject}}</html>',
+          subject: 'Weekly report',
+        },
+        formattedData: reportJson,
       });
 
     expect(response.status).toBe(202);
@@ -338,8 +341,11 @@ describe('API integration', () => {
     expect(mocks.postN8nWebhook).toHaveBeenCalledWith(
       'https://n8n.example.com/webhook/gmail-draft',
       expect.objectContaining({
-        emailTemplate: '<html>{{email.subject}}</html>',
-        json: reportJson,
+        email: {
+          template: '<html>{{email.subject}}</html>',
+          subject: 'Weekly report',
+        },
+        formattedData: reportJson,
         project: expect.objectContaining({ id: 'proj_1' }),
       }),
     );

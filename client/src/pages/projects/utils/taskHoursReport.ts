@@ -243,7 +243,7 @@ export function buildTaskHoursEmailReport(
     taskBreakdown,
     signature,
     email: {
-      subject: `Monthly Time & Billing Report — ${project.name} (${period.formatted})`,
+      subject: `Monthly Time & Billing Report for ${project.name}`,
       preheader: `${totalBillableHours.toFixed(2)} billable hours for ${project.name}`,
       title: 'Monthly Time & Billing Report',
       subtitle: emailSubtitle,

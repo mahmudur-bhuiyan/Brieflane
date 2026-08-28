@@ -140,14 +140,17 @@ export function TaskHoursEmailTemplateView({ projectId, report }: TaskHoursEmail
   const handleDraftGmail = useCallback(async () => {
     try {
       await draftGmail.mutateAsync({
-        emailTemplate: activeTemplate,
-        json: report,
+        email: {
+          template: renderedHtml,
+          subject: report.email.subject,
+        },
+        formattedData: report,
       });
       toast.success('Gmail draft workflow started.');
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Failed to start Gmail draft workflow.'));
     }
-  }, [activeTemplate, draftGmail, report]);
+  }, [draftGmail, renderedHtml, report]);
 
   return (
     <div className="flex flex-col">

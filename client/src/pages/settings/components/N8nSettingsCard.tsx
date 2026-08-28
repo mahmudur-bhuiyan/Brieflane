@@ -8,10 +8,10 @@ import { getApiErrorMessage } from '../../../lib/queries/auth';
 import { toast } from '../../../lib/toast';
 import type { IntegrationSettings } from '../../../types/app-settings';
 import {
+  buildN8nSettingsUpdatePayload,
   createN8nSettingsFormState,
   isN8nSettingsDirty,
   N8N_WEBHOOK_SECRET_MASK,
-  resolveN8nWebhookSecretForSubmit,
   validateN8nSettings,
 } from '../utils/appSettingsForm';
 
@@ -36,18 +36,19 @@ export function N8nSettingsCard({ saved }: { saved: IntegrationSettings }) {
 
     setError(null);
 
-    const validation = validateN8nSettings(form, saved.n8nWebhookSecretConfigured);
+    const validation = validateN8nSettings(form, saved);
     if (!validation.ok) {
       setError(validation.error);
       return;
     }
 
+    const payload = buildN8nSettingsUpdatePayload(form, saved);
+    if (Object.keys(payload).length === 0) {
+      return;
+    }
+
     try {
-      await updateSettings.mutateAsync({
-        n8nReportWebhookUrl: form.n8nReportWebhookUrl.trim(),
-        n8nGmailDraftWebhookUrl: form.n8nGmailDraftWebhookUrl.trim(),
-        n8nWebhookSecret: resolveN8nWebhookSecretForSubmit(form.n8nWebhookSecret),
-      });
+      await updateSettings.mutateAsync(payload);
       toast.success('n8n settings saved.');
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to save n8n settings'));
@@ -56,18 +57,18 @@ export function N8nSettingsCard({ saved }: { saved: IntegrationSettings }) {
 
   return (
     <Card>
-      <form className="space-y-5" onSubmit={handleSubmit}>
+      <form className="space-y-5" onSubmit={handleSubmit} noValidate>
         <div>
           <h3 className="text-base font-semibold text-heading">n8n</h3>
           <p className="mt-1 text-sm text-muted">
             Webhook URLs and shared secret used for report generation and Gmail drafts.
+            Save only the fields you change.
           </p>
         </div>
 
         <Input
           label="Report webhook URL"
           type="url"
-          required
           placeholder="https://n8n.example.com/webhook/generate-report"
           value={form.n8nReportWebhookUrl}
           onChange={(event) =>
@@ -92,7 +93,6 @@ export function N8nSettingsCard({ saved }: { saved: IntegrationSettings }) {
           <Input
             label="Webhook secret"
             type="password"
-            required={!saved.n8nWebhookSecretConfigured}
             icon={<IconLock width={16} height={16} />}
             value={form.n8nWebhookSecret}
             onChange={(event) =>
@@ -106,8 +106,8 @@ export function N8nSettingsCard({ saved }: { saved: IntegrationSettings }) {
           />
           <p className="mt-1.5 text-xs text-muted">
             {saved.n8nWebhookSecretConfigured
-              ? 'Replace the masked secret only if you want to change it.'
-              : 'Enter the shared secret sent as X-Brieflane-Secret.'}
+              ? 'Leave unchanged to keep the current secret. Replace only if you want to change it.'
+              : 'Optional until you need report generation. Sent as X-Brieflane-Secret.'}
           </p>
         </div>
 

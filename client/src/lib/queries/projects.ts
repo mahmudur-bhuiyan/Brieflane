@@ -153,8 +153,11 @@ export function useGenerateReportMutation(projectId: string) {
 }
 
 export type DraftGmailReportInput = {
-  emailTemplate: string;
-  json: TaskHoursEmailReport;
+  email: {
+    template: string;
+    subject: string;
+  };
+  formattedData: TaskHoursEmailReport;
 };
 
 export type DraftGmailReportResponse = {
