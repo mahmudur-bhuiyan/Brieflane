@@ -16,6 +16,8 @@ const mocks = vi.hoisted(() => ({
   reportRunFindMany: vi.fn(),
   listProjects: vi.fn(),
   triggerReport: vi.fn(),
+  postN8nWebhook: vi.fn(),
+  requireN8nGmailDraftWebhookUrl: vi.fn(),
   checkDatabaseConnection: vi.fn(),
 }));
 
@@ -58,6 +60,8 @@ vi.mock('./lib/n8n/client.js', () => ({
   requireN8nReportService: async () => ({
     triggerReport: mocks.triggerReport,
   }),
+  requireN8nGmailDraftWebhookUrl: mocks.requireN8nGmailDraftWebhookUrl,
+  postN8nWebhook: mocks.postN8nWebhook,
   isN8nError: (error: unknown) => error instanceof N8nError,
   getN8nReportService: vi.fn(),
 }));
@@ -290,5 +294,54 @@ describe('API integration', () => {
     expect(response.status).toBe(400);
     expect(response.body.error).toBe('Client email is required before generating a report');
     expect(mocks.triggerReport).not.toHaveBeenCalled();
+  });
+
+  it('triggers Gmail draft workflow with template and json', async () => {
+    mockSessionUser(superAdminRecord);
+    const token = await bearerToken(superAdminRecord);
+
+    mocks.projectFindUnique.mockResolvedValue({
+      id: 'proj_1',
+      acProjectId: 100,
+      name: 'AC Project',
+      clientName: 'Client',
+      clientEmail: 'client@example.com',
+      reportRecipients: [],
+      customMetadata: {},
+      status: 'ACTIVE',
+      lastSyncedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    mocks.requireN8nGmailDraftWebhookUrl.mockResolvedValue(
+      'https://n8n.example.com/webhook/gmail-draft',
+    );
+    mocks.postN8nWebhook.mockResolvedValue({ statusCode: 200, n8nExecutionId: 'exec_gmail_1' });
+
+    const reportJson = {
+      schemaVersion: '1.0',
+      email: { subject: 'Weekly report' },
+    };
+
+    const response = await request(app)
+      .post('/api/projects/proj_1/task-hours/draft-gmail')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        emailTemplate: '<html>{{email.subject}}</html>',
+        json: reportJson,
+      });
+
+    expect(response.status).toBe(202);
+    expect(response.body.status).toBe('accepted');
+    expect(response.body.n8nExecutionId).toBe('exec_gmail_1');
+    expect(mocks.postN8nWebhook).toHaveBeenCalledWith(
+      'https://n8n.example.com/webhook/gmail-draft',
+      expect.objectContaining({
+        emailTemplate: '<html>{{email.subject}}</html>',
+        json: reportJson,
+        project: expect.objectContaining({ id: 'proj_1' }),
+      }),
+    );
   });
 });

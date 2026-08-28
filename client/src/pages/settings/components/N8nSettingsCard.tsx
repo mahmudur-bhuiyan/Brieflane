@@ -45,6 +45,7 @@ export function N8nSettingsCard({ saved }: { saved: IntegrationSettings }) {
     try {
       await updateSettings.mutateAsync({
         n8nReportWebhookUrl: form.n8nReportWebhookUrl.trim(),
+        n8nGmailDraftWebhookUrl: form.n8nGmailDraftWebhookUrl.trim(),
         n8nWebhookSecret: resolveN8nWebhookSecretForSubmit(form.n8nWebhookSecret),
       });
       toast.success('n8n settings saved.');
@@ -59,7 +60,7 @@ export function N8nSettingsCard({ saved }: { saved: IntegrationSettings }) {
         <div>
           <h3 className="text-base font-semibold text-heading">n8n</h3>
           <p className="mt-1 text-sm text-muted">
-            Webhook URL and shared secret used when generating client reports.
+            Webhook URLs and shared secret used for report generation and Gmail drafts.
           </p>
         </div>
 
@@ -73,6 +74,19 @@ export function N8nSettingsCard({ saved }: { saved: IntegrationSettings }) {
             setForm((prev) => ({ ...prev, n8nReportWebhookUrl: event.target.value }))
           }
         />
+
+        <Input
+          label="Gmail draft webhook URL"
+          type="url"
+          placeholder="https://n8n.example.com/webhook/gmail-draft"
+          value={form.n8nGmailDraftWebhookUrl}
+          onChange={(event) =>
+            setForm((prev) => ({ ...prev, n8nGmailDraftWebhookUrl: event.target.value }))
+          }
+        />
+        <p className="-mt-3 text-xs text-muted">
+          Used when drafting task-hours reports in Gmail from the generate report page.
+        </p>
 
         <div>
           <Input

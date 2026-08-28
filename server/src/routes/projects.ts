@@ -18,7 +18,7 @@ import {
   fetchAcProjectUserTaskHours,
   searchActiveCollabProjects,
 } from '../lib/activecollab/proxy.js';
-import { isN8nError, requireN8nReportService } from '../lib/n8n/client.js';
+import { isN8nError, postN8nWebhook, requireN8nGmailDraftWebhookUrl, requireN8nReportService } from '../lib/n8n/client.js';
 import { buildN8nWebhookPayload } from '../lib/reports.js';
 import { prisma } from '../lib/prisma.js';
 import { toReportRunRecord } from '../schemas/report.js';
@@ -32,6 +32,7 @@ import { authMiddleware } from '../middleware/auth.js';
 import { requireRoles } from '../middleware/requireRoles.js';
 import { reportTriggerRateLimiter } from '../middleware/rate-limit.js';
 import { createProjectSchema, updateProjectSchema } from '../schemas/project.js';
+import { draftGmailReportSchema } from '../schemas/task-hours-draft.js';
 
 export const projectsRouter = Router();
 
@@ -411,6 +412,72 @@ projectsRouter.post('/:id/sync', async (req, res) => {
     });
   } catch (error) {
     handleActiveCollabError(error, res);
+  }
+});
+
+projectsRouter.post('/:id/task-hours/draft-gmail', reportTriggerRateLimiter, async (req, res) => {
+  const id = paramId(req.params.id);
+
+  if (!id) {
+    res.status(400).json({ error: 'Invalid project id' });
+    return;
+  }
+
+  const parsed = draftGmailReportSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten().fieldErrors });
+    return;
+  }
+
+  const user = req.user!;
+  const project = await prisma.project.findUnique({ where: { id } });
+
+  if (!project || !(await userCanAccessProject(user, id))) {
+    res.status(404).json({ error: 'Project not found' });
+    return;
+  }
+
+  let webhookUrl: string;
+
+  try {
+    webhookUrl = await requireN8nGmailDraftWebhookUrl();
+  } catch (error) {
+    if (isN8nError(error) && error.code === 'config') {
+      res.status(503).json({ error: error.message });
+      return;
+    }
+
+    throw error;
+  }
+
+  const payload = {
+    emailTemplate: parsed.data.emailTemplate,
+    json: parsed.data.json,
+    project: {
+      id: project.id,
+      name: project.name,
+      clientEmail: project.clientEmail,
+    },
+    triggeredBy: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+    },
+  };
+
+  try {
+    const result = await postN8nWebhook(webhookUrl, payload);
+
+    res.status(202).json({
+      status: 'accepted',
+      n8nExecutionId: result.n8nExecutionId,
+    });
+  } catch (error) {
+    const message = isN8nError(error) ? error.message : 'Failed to trigger Gmail draft workflow';
+    const status = isN8nError(error) && error.code === 'timeout' ? 504 : 502;
+
+    res.status(status).json({ error: message });
   }
 });
 

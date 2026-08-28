@@ -22,7 +22,8 @@ appSettingsRouter.put('/', async (req, res) => {
   }
 
   const current = await getIntegrationSettings();
-  const { activecollabBaseUrl, n8nReportWebhookUrl, n8nWebhookSecret } = parsed.data;
+  const { activecollabBaseUrl, n8nReportWebhookUrl, n8nGmailDraftWebhookUrl, n8nWebhookSecret } =
+    parsed.data;
 
   if (activecollabBaseUrl !== undefined && !activecollabBaseUrl.trim()) {
     res.status(400).json({ error: 'ActiveCollab base URL is required' });

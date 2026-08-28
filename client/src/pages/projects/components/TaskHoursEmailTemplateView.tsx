@@ -1,9 +1,10 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { IconCopy, IconMaximize, IconRefresh } from '../../../components/common/icons';
+import { IconCopy, IconMail, IconMaximize, IconRefresh } from '../../../components/common/icons';
 import { Button } from '../../../components/ui/Button';
 import { Textarea } from '../../../components/ui/Input';
 import { Modal } from '../../../components/ui/Modal';
+import { getApiErrorMessage, useDraftGmailReportMutation } from '../../../lib/queries/projects';
 import { toast } from '../../../lib/toast';
 import type { TaskHoursEmailReport } from '../types/taskHoursReport';
 import {
@@ -54,6 +55,7 @@ const previewPanelButtonClassName =
   '!border-slate-300 !bg-white !text-slate-700 hover:!bg-slate-50 hover:!text-slate-900';
 
 type TaskHoursEmailTemplateViewProps = {
+  projectId: string;
   report: TaskHoursEmailReport;
 };
 
@@ -79,8 +81,9 @@ function ModeButton({
   );
 }
 
-export function TaskHoursEmailTemplateView({ report }: TaskHoursEmailTemplateViewProps) {
+export function TaskHoursEmailTemplateView({ projectId, report }: TaskHoursEmailTemplateViewProps) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const draftGmail = useDraftGmailReportMutation(projectId);
   const defaultTemplate = useMemo(() => getDefaultTaskHoursEmailTemplate(), []);
   const mode = parseTemplateMode(searchParams.get(TEMPLATE_MODE_PARAM));
   const [customTemplate, setCustomTemplate] = useState(defaultTemplate);
@@ -134,6 +137,18 @@ export function TaskHoursEmailTemplateView({ report }: TaskHoursEmailTemplateVie
     }
   }, [renderedHtml]);
 
+  const handleDraftGmail = useCallback(async () => {
+    try {
+      await draftGmail.mutateAsync({
+        emailTemplate: activeTemplate,
+        json: report,
+      });
+      toast.success('Gmail draft workflow started.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Failed to start Gmail draft workflow.'));
+    }
+  }, [activeTemplate, draftGmail, report]);
+
   return (
     <div className="flex flex-col">
       <div className="flex flex-col gap-3 border-b border-subtle px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5 lg:px-6">
@@ -163,6 +178,15 @@ export function TaskHoursEmailTemplateView({ report }: TaskHoursEmailTemplateVie
           <Button type="button" variant="secondary" size="sm" onClick={handleCopyHtml}>
             <IconCopy className="h-4 w-4" />
             Copy HTML
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleDraftGmail}
+            disabled={draftGmail.isPending}
+          >
+            <IconMail className="h-4 w-4" />
+            {draftGmail.isPending ? 'Drafting…' : 'Draft in Gmail'}
           </Button>
         </div>
       </div>

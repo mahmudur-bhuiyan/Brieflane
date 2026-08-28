@@ -14,6 +14,7 @@ import type {
   UpdateProjectInput,
 } from '../../types/project';
 import type { GenerateReportResponse } from '../../types/report';
+import type { TaskHoursEmailReport } from '../../pages/projects/types/taskHoursReport';
 import { queryKeys } from './keys';
 
 function projectsPath(search: string): string {
@@ -148,6 +149,26 @@ export function useGenerateReportMutation(projectId: string) {
       void queryClient.invalidateQueries({ queryKey: queryKeys.reportRuns.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
     },
+  });
+}
+
+export type DraftGmailReportInput = {
+  emailTemplate: string;
+  json: TaskHoursEmailReport;
+};
+
+export type DraftGmailReportResponse = {
+  status: 'accepted';
+  n8nExecutionId: string | null;
+};
+
+export function useDraftGmailReportMutation(projectId: string) {
+  return useMutation({
+    mutationFn: (payload: DraftGmailReportInput) =>
+      apiFetch<DraftGmailReportResponse>(`/api/projects/${projectId}/task-hours/draft-gmail`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
   });
 }
 
