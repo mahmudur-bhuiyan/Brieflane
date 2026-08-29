@@ -19,6 +19,10 @@ export function createApp() {
   applySecurityMiddleware(app, webOrigin);
   app.use(express.json({ limit: '1mb' }));
 
+  app.get('/', (_req, res) => {
+    res.type('text').send(`${APP_NAME} server is running`);
+  });
+
   app.get('/api/health', async (_req, res) => {
     const hasDatabaseUrl = Boolean(process.env.DATABASE_URL);
 
