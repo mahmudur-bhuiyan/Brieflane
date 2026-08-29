@@ -87,7 +87,7 @@ export function ActiveCollabCredentialsModal({
   return (
     <Modal
       title="ActiveCollab credentials"
-      description="Store your ActiveCollab email/username and password for sync and report actions."
+      description="Store your ActiveCollab email/username and password for search and report actions."
       onClose={onClose}
     >
       {loading ? (

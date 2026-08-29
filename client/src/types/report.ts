@@ -24,15 +24,6 @@ export type ReportRunRecord = {
   completedAt: string | null;
 };
 
-export type GenerateReportResponse = {
-  reportRun: ReportRunRecord;
-};
-
-export type GenerateReportErrorResponse = {
-  error: string;
-  reportRun?: ReportRunRecord;
-};
-
 export type ReportRunListRecord = ReportRunRecord & {
   projectName: string;
   acProjectId: number;
@@ -44,16 +35,6 @@ export type ReportRunSummary = {
   failed: number;
   running: number;
   pending: number;
-};
-
-export type ReportRunsListResponse = {
-  reportRuns: ReportRunListRecord[];
-  count: number;
-  summary: ReportRunSummary;
-};
-
-export type ReportRunDetailResponse = {
-  reportRun: ReportRunListRecord;
 };
 
 export type DashboardReportStats = {

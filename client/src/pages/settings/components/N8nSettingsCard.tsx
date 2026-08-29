@@ -1,8 +1,5 @@
 import { useEffect, useState, type SubmitEvent } from 'react';
-import { IconLock } from '../../../components/common/icons';
-import { Button } from '../../../components/ui/Button';
-import { Card } from '../../../components/ui/Card';
-import { Input } from '../../../components/ui/Input';
+import { IconMail } from '../../../components/common/icons';
 import { useUpdateIntegrationSettingsMutation } from '../../../lib/queries/app-settings';
 import { getApiErrorMessage } from '../../../lib/queries/auth';
 import { toast } from '../../../lib/toast';
@@ -11,9 +8,9 @@ import {
   buildN8nSettingsUpdatePayload,
   createN8nSettingsFormState,
   isN8nSettingsDirty,
-  N8N_WEBHOOK_SECRET_MASK,
   validateN8nSettings,
 } from '../utils/appSettingsForm';
+import { IntegrationSettingsCard } from './IntegrationSettingsCard';
 
 export function N8nSettingsCard({ saved }: { saved: IntegrationSettings }) {
   const updateSettings = useUpdateIntegrationSettingsMutation();
@@ -27,6 +24,7 @@ export function N8nSettingsCard({ saved }: { saved: IntegrationSettings }) {
   const submitting = updateSettings.isPending;
   const dirty = isN8nSettingsDirty(form, saved);
   const canSave = dirty && !submitting;
+  const configured = Boolean(saved.n8nGmailDraftWebhookUrl.trim());
 
   const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -56,73 +54,26 @@ export function N8nSettingsCard({ saved }: { saved: IntegrationSettings }) {
   };
 
   return (
-    <Card>
-      <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-        <div>
-          <h3 className="text-base font-semibold text-heading">n8n</h3>
-          <p className="mt-1 text-sm text-muted">
-            Webhook URLs and shared secret used for report generation and Gmail drafts.
-            Save only the fields you change.
-          </p>
-        </div>
-
-        <Input
-          label="Report webhook URL"
-          type="url"
-          placeholder="https://n8n.example.com/webhook/generate-report"
-          value={form.n8nReportWebhookUrl}
-          onChange={(event) =>
-            setForm((prev) => ({ ...prev, n8nReportWebhookUrl: event.target.value }))
-          }
-        />
-
-        <Input
-          label="Gmail draft webhook URL"
-          type="url"
-          placeholder="https://n8n.example.com/webhook/gmail-draft"
-          value={form.n8nGmailDraftWebhookUrl}
-          onChange={(event) =>
-            setForm((prev) => ({ ...prev, n8nGmailDraftWebhookUrl: event.target.value }))
-          }
-        />
-        <p className="-mt-3 text-xs text-muted">
-          Used when drafting task-hours reports in Gmail from the generate report page.
-        </p>
-
-        <div>
-          <Input
-            label="Webhook secret"
-            type="password"
-            icon={<IconLock width={16} height={16} />}
-            value={form.n8nWebhookSecret}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, n8nWebhookSecret: event.target.value }))
-            }
-            onFocus={() => {
-              if (form.n8nWebhookSecret === N8N_WEBHOOK_SECRET_MASK) {
-                setForm((prev) => ({ ...prev, n8nWebhookSecret: '' }));
-              }
-            }}
-          />
-          <p className="mt-1.5 text-xs text-muted">
-            {saved.n8nWebhookSecretConfigured
-              ? 'Leave unchanged to keep the current secret. Replace only if you want to change it.'
-              : 'Optional until you need report generation. Sent as X-Brieflane-Secret.'}
-          </p>
-        </div>
-
-        {error && (
-          <p className="text-sm text-red-500" role="alert">
-            {error}
-          </p>
-        )}
-
-        <div className="flex justify-end">
-          <Button type="submit" disabled={!canSave}>
-            {submitting ? 'Saving…' : 'Save n8n'}
-          </Button>
-        </div>
-      </form>
-    </Card>
+    <IntegrationSettingsCard
+      accent="violet"
+      icon={<IconMail />}
+      title="n8n Gmail Draft Webhook"
+      description="Configure the n8n webhook URL used when drafting task-hours reports in Gmail from the generate report page."
+      fieldLabel="Webhook URL"
+      fieldValue={form.n8nGmailDraftWebhookUrl}
+      fieldPlaceholder="https://n8n.example.com/webhook/gmail-draft"
+      helperText="Enter the full webhook URL where Gmail draft requests should be sent. Clear and save to remove the URL."
+      saveLabel="Save URL"
+      savingLabel="Saving…"
+      configured={configured}
+      configuredSummary="Service Configured"
+      configuredDetailLabel="Gmail drafts will be sent to:"
+      configuredValue={saved.n8nGmailDraftWebhookUrl}
+      canSave={canSave}
+      submitting={submitting}
+      error={error}
+      onFieldChange={(value) => setForm((prev) => ({ ...prev, n8nGmailDraftWebhookUrl: value }))}
+      onSubmit={handleSubmit}
+    />
   );
 }

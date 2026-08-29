@@ -127,7 +127,7 @@ export function ProjectTaskHoursReportPage() {
             </Button>
           </div>
         ) : (
-          <TaskHoursReportView projectId={id} report={reportPayload} />
+          <TaskHoursReportView projectId={id} report={reportPayload} customHours={customHours} />
         )}
       </Card>
     </AppLayout>

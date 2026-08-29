@@ -31,6 +31,11 @@ enum ReportRunStatus {
   failed
 }
 
+enum TaskHoursReportArchiveStatus {
+  drafted
+  failed
+}
+
 model User {
   id                  String     @id @default(cuid())
   email               String     @unique
@@ -45,6 +50,7 @@ model User {
   updatedAt           DateTime   @updatedAt @map("updated_at")
 
   reportRuns ReportRun[]
+  taskHoursReportArchives TaskHoursReportArchive[]
   assignments ProjectAssignment[]
 
   @@map("users")
@@ -77,6 +83,7 @@ model Project {
   updatedAt        DateTime      @updatedAt @map("updated_at")
 
   reportRuns ReportRun[]
+  taskHoursReportArchives TaskHoursReportArchive[]
   assignments ProjectAssignment[]
 
   @@map("projects")
@@ -108,4 +115,31 @@ model ReportRun {
   @@index([projectId])
   @@index([triggeredById])
   @@map("report_runs")
+}
+
+model TaskHoursReportArchive {
+  id                 String                       @id @default(cuid())
+  projectId          String                       @map("project_id")
+  createdById        String                       @map("created_by_id")
+  status             TaskHoursReportArchiveStatus @default(drafted)
+  recipientEmail     String                       @map("recipient_email")
+  subject            String
+  periodStart        String?                      @map("period_start")
+  periodEnd          String?                      @map("period_end")
+  totalBillableHours Decimal?                     @map("total_billable_hours") @db.Decimal(10, 2)
+  n8nPayload         Json                         @map("n8n_payload")
+  n8nExecutionId     String?                      @map("n8n_execution_id")
+  resentFromId       String?                      @map("resent_from_id")
+  errorMessage       String?                      @map("error_message") @db.Text
+  createdAt          DateTime                     @default(now()) @map("created_at")
+
+  project    Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy  User                     @relation(fields: [createdById], references: [id])
+  resentFrom TaskHoursReportArchive?  @relation("ResendChain", fields: [resentFromId], references: [id], onDelete: SetNull)
+  resends    TaskHoursReportArchive[] @relation("ResendChain")
+
+  @@index([projectId])
+  @@index([createdById])
+  @@index([createdAt])
+  @@map("task_hours_report_archives")
 }

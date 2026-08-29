@@ -26,6 +26,7 @@ import {
   assignProjectToUser,
   linkExistingProjectToUser,
   projectListFilter,
+  unassignProjectFromUser,
   userCanAccessProject,
 } from '../lib/project-access.js';
 import { authMiddleware } from '../middleware/auth.js';
@@ -33,6 +34,10 @@ import { requireRoles } from '../middleware/requireRoles.js';
 import { reportTriggerRateLimiter } from '../middleware/rate-limit.js';
 import { createProjectSchema, updateProjectSchema } from '../schemas/project.js';
 import { draftGmailReportSchema } from '../schemas/task-hours-draft.js';
+import {
+  buildArchiveCreateData,
+  buildGmailDraftN8nPayload,
+} from '../lib/task-hours-report-archive.js';
 
 export const projectsRouter = Router();
 
@@ -333,88 +338,6 @@ projectsRouter.post('/', async (req, res) => {
   });
 });
 
-function normalizeProjectName(value: string): string {
-  return value.trim().toLowerCase();
-}
-
-projectsRouter.post('/:id/sync', async (req, res) => {
-  const id = paramId(req.params.id);
-
-  if (!id) {
-    res.status(400).json({ error: 'Invalid project id' });
-    return;
-  }
-
-  const parsed = activeCollabCredentialsSchema.safeParse(req.body);
-
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.flatten().fieldErrors });
-    return;
-  }
-
-  const project = await prisma.project.findUnique({ where: { id } });
-
-  if (!project || !(await userCanAccessProject(req.user!, id))) {
-    res.status(404).json({ error: 'Project not found' });
-    return;
-  }
-
-  try {
-    const acResults = await searchActiveCollabProjects(parsed.data, project.name);
-    const brieflane = { name: project.name, acProjectId: project.acProjectId };
-    const exactIdMatch = acResults.find((result) => result.id === project.acProjectId);
-
-    if (exactIdMatch) {
-      const namesMatch =
-        normalizeProjectName(exactIdMatch.name) === normalizeProjectName(project.name);
-
-      if (namesMatch) {
-        const now = new Date();
-        const updated = await prisma.project.update({
-          where: { id },
-          data: {
-            name: exactIdMatch.name,
-            lastSyncedAt: now,
-          },
-        });
-
-        res.json({ status: 'synced', project: toProjectRecord(updated) });
-        return;
-      }
-
-      res.json({
-        status: 'mismatch',
-        brieflane,
-        activeCollab: exactIdMatch,
-        similarProjects: acResults,
-      });
-      return;
-    }
-
-    const nameMatch = acResults.find(
-      (result) => normalizeProjectName(result.name) === normalizeProjectName(project.name),
-    );
-
-    if (nameMatch) {
-      res.json({
-        status: 'mismatch',
-        brieflane,
-        activeCollab: nameMatch,
-        similarProjects: acResults,
-      });
-      return;
-    }
-
-    res.json({
-      status: 'not_found',
-      brieflane,
-      similarProjects: acResults,
-    });
-  } catch (error) {
-    handleActiveCollabError(error, res);
-  }
-});
-
 projectsRouter.post('/:id/task-hours/draft-gmail', reportTriggerRateLimiter, async (req, res) => {
   const id = paramId(req.params.id);
 
@@ -438,6 +361,13 @@ projectsRouter.post('/:id/task-hours/draft-gmail', reportTriggerRateLimiter, asy
     return;
   }
 
+  const clientEmail = project.clientEmail?.trim() ?? '';
+
+  if (clientEmail && !z.string().email().safeParse(clientEmail).success) {
+    res.status(400).json({ error: 'Project client email is invalid' });
+    return;
+  }
+
   let webhookUrl: string;
 
   try {
@@ -451,31 +381,43 @@ projectsRouter.post('/:id/task-hours/draft-gmail', reportTriggerRateLimiter, asy
     throw error;
   }
 
-  const payload = {
-    email: parsed.data.email,
-    formattedData: parsed.data.formattedData,
-    project: {
-      id: project.id,
-      name: project.name,
-      clientEmail: project.clientEmail,
-    },
-    triggeredBy: {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-    },
-  };
+  const n8nPayload = buildGmailDraftN8nPayload(clientEmail, parsed.data);
 
   try {
-    const result = await postN8nWebhook(webhookUrl, payload);
+    const result = await postN8nWebhook(webhookUrl, n8nPayload);
+
+    const archive = await prisma.taskHoursReportArchive.create({
+      data: buildArchiveCreateData(project, user.id, parsed.data, clientEmail, n8nPayload, {
+        status: 'drafted',
+        n8nExecutionId: result.n8nExecutionId,
+      }),
+    });
 
     res.status(202).json({
       status: 'accepted',
       n8nExecutionId: result.n8nExecutionId,
+      archiveId: archive.id,
+      project: toProjectRecord(project),
+      triggeredBy: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      },
     });
   } catch (error) {
     const message = isN8nError(error) ? error.message : 'Failed to trigger Gmail draft workflow';
     const status = isN8nError(error) && error.code === 'timeout' ? 504 : 502;
+
+    try {
+      await prisma.taskHoursReportArchive.create({
+        data: buildArchiveCreateData(project, user.id, parsed.data, clientEmail, n8nPayload, {
+          status: 'failed',
+          errorMessage: message,
+        }),
+      });
+    } catch (archiveError) {
+      console.error('[TaskHoursReportArchive] Failed to persist failed draft:', archiveError);
+    }
 
     res.status(status).json({ error: message });
   }
@@ -640,6 +582,33 @@ projectsRouter.patch('/:id', async (req, res) => {
   });
 
   res.json({ project: toProjectRecord(project) });
+});
+
+projectsRouter.delete('/:id/assignment', async (req, res) => {
+  const id = paramId(req.params.id);
+
+  if (!id) {
+    res.status(400).json({ error: 'Invalid project id' });
+    return;
+  }
+
+  const user = req.user!;
+
+  if (user.role !== 'PROJECT_MANAGER') {
+    res.status(403).json({ error: 'Forbidden' });
+    return;
+  }
+
+  const project = await prisma.project.findUnique({ where: { id } });
+
+  if (!project || !(await userCanAccessProject(user, id))) {
+    res.status(404).json({ error: 'Project not found' });
+    return;
+  }
+
+  await unassignProjectFromUser(user.id, id);
+
+  res.json({ removed: true });
 });
 
 projectsRouter.delete('/:id', requireRoles('SUPER_ADMIN'), async (req, res) => {

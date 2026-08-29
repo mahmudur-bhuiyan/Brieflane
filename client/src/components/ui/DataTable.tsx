@@ -71,6 +71,7 @@ type DataTableProps<T> = {
   emptyTitle?: string;
   emptyDescription?: string;
   emptyAction?: ReactNode;
+  toolbarStart?: ReactNode;
   renderMobileRow?: (row: T) => ReactNode;
 };
 
@@ -142,6 +143,7 @@ export function DataTable<T>({
   emptyTitle = 'No results',
   emptyDescription,
   emptyAction,
+  toolbarStart,
   renderMobileRow,
 }: DataTableProps<T>) {
   const [searchInput, setSearchInput] = useState(search);
@@ -177,14 +179,19 @@ export function DataTable<T>({
   return (
     <div>
       <div className="border-b border-subtle px-4 py-4 sm:px-6">
-        <Input
-          label="Search"
-          type="search"
-          hideLabel
-          value={searchInput}
-          onChange={(event) => setSearchInput(event.target.value)}
-          placeholder={searchPlaceholder}
-        />
+        <div className="flex flex-wrap items-end gap-4">
+          {toolbarStart}
+          <div className="min-w-0 flex-1 basis-48">
+            <Input
+              label="Search"
+              type="search"
+              hideLabel
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder={searchPlaceholder}
+            />
+          </div>
+        </div>
       </div>
 
       {error && (

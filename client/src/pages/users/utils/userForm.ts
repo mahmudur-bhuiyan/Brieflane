@@ -39,3 +39,39 @@ export function buildUpdateUserPayload(form: UserFormState): UpdateUserInput {
     ...(form.password && { password: form.password }),
   };
 }
+
+function projectIdsEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  const sortedA = [...a].sort();
+  const sortedB = [...b].sort();
+  return sortedA.every((id, index) => id === sortedB[index]);
+}
+
+export function isEditUserFormDirty(
+  form: UserFormState,
+  initialForm: UserFormState,
+  selectedProjectIds: string[],
+  initialProjectIds: string[],
+  includeProjectAssignments: boolean,
+): boolean {
+  if (form.name.trim() !== initialForm.name.trim()) {
+    return true;
+  }
+
+  if (form.designation.trim() !== initialForm.designation.trim()) {
+    return true;
+  }
+
+  if (form.status !== initialForm.status) {
+    return true;
+  }
+
+  if (includeProjectAssignments && !projectIdsEqual(selectedProjectIds, initialProjectIds)) {
+    return true;
+  }
+
+  return false;
+}

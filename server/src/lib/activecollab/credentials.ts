@@ -11,6 +11,13 @@ export class StoredCredentialsError extends Error {
   }
 }
 
+export function isStoredCredentialsError(error: unknown): error is StoredCredentialsError {
+  return (
+    error instanceof StoredCredentialsError ||
+    (error instanceof Error && error.name === 'StoredCredentialsError')
+  );
+}
+
 export type StoredActiveCollabCredentialsState =
   | { status: 'missing' }
   | { status: 'unreadable'; username: string }

@@ -1,11 +1,6 @@
 import type { SortOrder } from '../../../types/pagination';
 import type { ProjectRecord } from '../../../types/project';
 
-export function formatSyncedAt(value: string | null): string {
-  if (!value) return 'Never synced';
-  return new Date(value).toLocaleString();
-}
-
 export function sortProjects(
   projects: ProjectRecord[],
   sortBy: string,
@@ -24,11 +19,6 @@ export function sortProjects(
         const aEmail = a.clientEmail ?? '';
         const bEmail = b.clientEmail ?? '';
         return direction * aEmail.localeCompare(bEmail);
-      }
-      case 'lastSyncedAt': {
-        const aTime = a.lastSyncedAt ? new Date(a.lastSyncedAt).getTime() : 0;
-        const bTime = b.lastSyncedAt ? new Date(b.lastSyncedAt).getTime() : 0;
-        return direction * (aTime - bTime);
       }
       default:
         return 0;

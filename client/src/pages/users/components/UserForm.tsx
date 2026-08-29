@@ -20,9 +20,10 @@ import {
   buildCreateUserPayload,
   buildUpdateUserPayload,
   emptyUserForm,
+  isEditUserFormDirty,
   userToForm,
 } from '../utils/userForm';
-import type { UserFormMode } from '../types/userForm';
+import type { UserFormMode, UserFormState } from '../types/userForm';
 
 export function UserForm({ mode, userId }: { mode: UserFormMode; userId?: string }) {
   const navigate = useNavigate();
@@ -39,24 +40,34 @@ export function UserForm({ mode, userId }: { mode: UserFormMode; userId?: string
   const showAssignments = mode === 'edit' && user?.role === 'PROJECT_MANAGER';
   const { data: assignmentsData } = useUserAssignmentsQuery(user?.id, showAssignments);
   const [form, setForm] = useState(emptyUserForm);
+  const [initialForm, setInitialForm] = useState<UserFormState | null>(null);
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
+  const [initialProjectIds, setInitialProjectIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(mode === 'create');
 
   useEffect(() => {
     if (mode === 'edit' && user) {
-      setForm(userToForm(user));
+      const nextForm = userToForm(user);
+      setForm(nextForm);
+      setInitialForm(nextForm);
       setInitialized(true);
     }
   }, [mode, user]);
 
   useEffect(() => {
     if (assignmentsData) {
-      setSelectedProjectIds(assignmentsData.assignments.map((row) => row.projectId));
+      const projectIds = assignmentsData.assignments.map((row) => row.projectId);
+      setSelectedProjectIds(projectIds);
+      setInitialProjectIds(projectIds);
     }
   }, [assignmentsData]);
 
   const submitting = createUser.isPending || updateUser.isPending || setAssignments.isPending;
+  const hasChanges =
+    mode === 'create' ||
+    (initialForm !== null &&
+      isEditUserFormDirty(form, initialForm, selectedProjectIds, initialProjectIds, showAssignments));
   const projects = projectsData?.projects ?? [];
 
   function toggleProject(projectId: string) {
@@ -118,7 +129,7 @@ export function UserForm({ mode, userId }: { mode: UserFormMode; userId?: string
       description={
         mode === 'create'
           ? 'Create a Project Manager account.'
-          : 'Update status, password, or project access.'
+          : 'Update status or project access.'
       }
     >
       <div className="mb-6">
@@ -134,7 +145,7 @@ export function UserForm({ mode, userId }: { mode: UserFormMode; userId?: string
       <PageHeader
         title={mode === 'create' ? 'Add user' : user?.name || user?.email || 'Edit user'}
         description={
-          mode === 'create' ? 'Create a Project Manager account.' : 'Update status or password.'
+          mode === 'create' ? 'Create a Project Manager account.' : 'Update status or project access.'
         }
       />
 
@@ -185,15 +196,17 @@ export function UserForm({ mode, userId }: { mode: UserFormMode; userId?: string
             </Select>
           )}
 
-          <Input
-            label={mode === 'create' ? 'Password' : 'New password (optional)'}
-            type="password"
-            required={mode === 'create'}
-            minLength={8}
-            placeholder="Minimum 8 characters"
-            value={form.password}
-            onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
-          />
+          {mode === 'create' && (
+            <Input
+              label="Password"
+              type="password"
+              required
+              minLength={8}
+              placeholder="Minimum 8 characters"
+              value={form.password}
+              onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+            />
+          )}
 
           {showAssignments && (
             <div>
@@ -204,7 +217,7 @@ export function UserForm({ mode, userId }: { mode: UserFormMode; userId?: string
               <div className="mt-3 max-h-48 space-y-2 overflow-y-auto rounded-xl border border-subtle bg-subtle p-3">
                 {projects.length === 0 ? (
                   <p className="text-sm text-faint">
-                    No projects in Brieflane yet. Sync from ActiveCollab first.
+                    No projects available to assign yet.
                   </p>
                 ) : (
                   projects.map((project) => (
@@ -244,7 +257,7 @@ export function UserForm({ mode, userId }: { mode: UserFormMode; userId?: string
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
+            <Button type="submit" disabled={submitting || !hasChanges} className="w-full sm:w-auto">
               {submitting ? 'Saving…' : 'Save user'}
             </Button>
           </div>

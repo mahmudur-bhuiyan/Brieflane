@@ -6,6 +6,7 @@ import { Textarea } from '../../../components/ui/Input';
 import { Modal } from '../../../components/ui/Modal';
 import { getApiErrorMessage, useDraftGmailReportMutation } from '../../../lib/queries/projects';
 import { toast } from '../../../lib/toast';
+import type { CustomHoursEntry } from '../types/customHours';
 import type { TaskHoursEmailReport } from '../types/taskHoursReport';
 import {
   EMAIL_TEMPLATE_PLACEHOLDERS,
@@ -57,6 +58,7 @@ const previewPanelButtonClassName =
 type TaskHoursEmailTemplateViewProps = {
   projectId: string;
   report: TaskHoursEmailReport;
+  customHours?: CustomHoursEntry[];
 };
 
 function ModeButton({
@@ -81,7 +83,11 @@ function ModeButton({
   );
 }
 
-export function TaskHoursEmailTemplateView({ projectId, report }: TaskHoursEmailTemplateViewProps) {
+export function TaskHoursEmailTemplateView({
+  projectId,
+  report,
+  customHours = [],
+}: TaskHoursEmailTemplateViewProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const draftGmail = useDraftGmailReportMutation(projectId);
   const defaultTemplate = useMemo(() => getDefaultTaskHoursEmailTemplate(), []);
@@ -90,6 +96,7 @@ export function TaskHoursEmailTemplateView({ projectId, report }: TaskHoursEmail
   const [fullPagePreviewOpen, setFullPagePreviewOpen] = useState(false);
 
   const activeTemplate = mode === 'prebuilt' ? defaultTemplate : customTemplate;
+  const hasCustomChanges = customTemplate !== defaultTemplate;
 
   const renderedHtml = useMemo(
     () => renderTaskHoursEmailTemplate(activeTemplate, report),
@@ -144,13 +151,13 @@ export function TaskHoursEmailTemplateView({ projectId, report }: TaskHoursEmail
           template: renderedHtml,
           subject: report.email.subject,
         },
-        formattedData: report,
+        formattedData: { report, customHours },
       });
       toast.success('Gmail draft workflow started.');
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Failed to start Gmail draft workflow.'));
     }
-  }, [draftGmail, renderedHtml, report]);
+  }, [customHours, draftGmail, renderedHtml, report]);
 
   return (
     <div className="flex flex-col">
@@ -172,7 +179,7 @@ export function TaskHoursEmailTemplateView({ projectId, report }: TaskHoursEmail
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {mode === 'custom' ? (
+          {mode === 'custom' && hasCustomChanges ? (
             <Button type="button" variant="secondary" size="sm" onClick={handleReset}>
               <IconRefresh className="h-4 w-4" />
               Reset to default

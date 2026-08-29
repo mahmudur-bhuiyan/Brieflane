@@ -4,6 +4,7 @@ import type { AuthUser } from '../schemas/auth.js';
 const mocks = vi.hoisted(() => ({
   projectAssignmentFindUnique: vi.fn(),
   projectAssignmentUpsert: vi.fn(),
+  projectAssignmentDeleteMany: vi.fn(),
 }));
 
 vi.mock('./prisma.js', () => ({
@@ -11,6 +12,7 @@ vi.mock('./prisma.js', () => ({
     projectAssignment: {
       findUnique: mocks.projectAssignmentFindUnique,
       upsert: mocks.projectAssignmentUpsert,
+      deleteMany: mocks.projectAssignmentDeleteMany,
     },
   },
 }));
@@ -18,6 +20,7 @@ vi.mock('./prisma.js', () => ({
 import {
   assignProjectToUser,
   linkExistingProjectToUser,
+  unassignProjectFromUser,
   userCanAccessProject,
 } from './project-access.js';
 
@@ -116,6 +119,31 @@ describe('linkExistingProjectToUser', () => {
     await linkExistingProjectToUser(pmTwo, 'project-1');
 
     expect(mocks.projectAssignmentUpsert).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('unassignProjectFromUser', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('removes only the requesting user assignment', async () => {
+    mocks.projectAssignmentDeleteMany.mockResolvedValue({ count: 1 });
+
+    const removed = await unassignProjectFromUser('pm1', 'project-1');
+
+    expect(removed).toBe(true);
+    expect(mocks.projectAssignmentDeleteMany).toHaveBeenCalledWith({
+      where: { userId: 'pm1', projectId: 'project-1' },
+    });
+  });
+
+  it('returns false when no assignment existed', async () => {
+    mocks.projectAssignmentDeleteMany.mockResolvedValue({ count: 0 });
+
+    const removed = await unassignProjectFromUser('pm1', 'project-1');
+
+    expect(removed).toBe(false);
   });
 });
 
