@@ -1,4 +1,4 @@
-import { cloneElement, isValidElement, type FormEvent, type ReactElement, type ReactNode } from 'react';
+import { cloneElement, isValidElement, type ReactElement, type ReactNode, type SubmitEvent } from 'react';
 import { IconSend } from '../../../components/common/icons';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
@@ -55,7 +55,7 @@ type IntegrationSettingsCardProps = {
   submitting: boolean;
   error: string | null;
   onFieldChange: (value: string) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
 };
 
 function renderHeaderIcon(icon: ReactNode) {
