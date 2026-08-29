@@ -12,7 +12,6 @@ import type {
   SyncProjectsResponse,
   UpdateProjectInput,
 } from '../../types/project';
-import type { GenerateReportResponse } from '../../types/report';
 import type { CustomHoursEntry } from '../../pages/projects/types/customHours';
 import type { TaskHoursEmailReport } from '../../pages/projects/types/taskHoursReport';
 import type { ProjectRecord } from '../../types/project';
@@ -130,21 +129,6 @@ export function useFetchAcTaskHoursMutation() {
         method: 'POST',
         body: JSON.stringify(payload),
       }),
-  });
-}
-
-export function useGenerateReportMutation(projectId: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: () =>
-      apiFetch<GenerateReportResponse>(`/api/projects/${projectId}/generate-report`, {
-        method: 'POST',
-      }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.reportRuns.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
-    },
   });
 }
 

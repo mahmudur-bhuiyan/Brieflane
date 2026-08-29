@@ -18,12 +18,6 @@ export const queryKeys = {
     detail: (id: string) => ['users', 'detail', id] as const,
     assignments: (userId: string) => ['users', 'assignments', userId] as const,
   },
-  reportRuns: {
-    all: ['reportRuns'] as const,
-    project: (projectId: string) => ['reportRuns', 'project', projectId] as const,
-    list: (params: { projectId?: string; status?: string; limit?: number }) =>
-      ['reportRuns', 'list', params] as const,
-  },
   taskHoursReports: {
     all: ['taskHoursReports'] as const,
     list: (params: { projectId?: string; limit?: number }) =>
