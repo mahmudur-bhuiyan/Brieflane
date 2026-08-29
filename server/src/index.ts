@@ -1,6 +1,8 @@
+import express from 'express';
 import { createApp } from './create-app.js';
 import { bootstrapSuperAdmin } from './services/bootstrap-admin.js';
 
+void express;
 const app = createApp();
 
 void bootstrapSuperAdmin().catch((error) => {
