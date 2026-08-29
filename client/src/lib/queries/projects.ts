@@ -9,12 +9,13 @@ import type {
   ProjectsListResponse,
   SearchAcProjectsInput,
   SearchAcProjectsResponse,
-  SyncProjectResponse,
   SyncProjectsResponse,
   UpdateProjectInput,
 } from '../../types/project';
 import type { GenerateReportResponse } from '../../types/report';
+import type { CustomHoursEntry } from '../../pages/projects/types/customHours';
 import type { TaskHoursEmailReport } from '../../pages/projects/types/taskHoursReport';
+import type { ProjectRecord } from '../../types/project';
 import { queryKeys } from './keys';
 
 function projectsPath(search: string): string {
@@ -84,6 +85,19 @@ export function useArchiveProjectMutation() {
   });
 }
 
+export function useRemoveProjectAssignmentMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<{ removed: boolean }>(`/api/projects/${id}/assignment`, { method: 'DELETE' }),
+    onSuccess: (_data, id) => {
+      queryClient.removeQueries({ queryKey: queryKeys.projects.detail(id) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+    },
+  });
+}
+
 export function useSyncProjectsMutation() {
   const queryClient = useQueryClient();
 
@@ -95,24 +109,6 @@ export function useSyncProjectsMutation() {
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-    },
-  });
-}
-
-export function useSyncProjectMutation(projectId: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (credentials: ActiveCollabCredentials) =>
-      apiFetch<SyncProjectResponse>(`/api/projects/${projectId}/sync`, {
-        method: 'POST',
-        body: JSON.stringify(credentials),
-      }),
-    onSuccess: (data) => {
-      if (data.status === 'synced') {
-        queryClient.setQueryData(queryKeys.projects.detail(projectId), { project: data.project });
-        void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-      }
     },
   });
 }
@@ -152,26 +148,43 @@ export function useGenerateReportMutation(projectId: string) {
   });
 }
 
+export type DraftGmailReportFormattedData = {
+  report: TaskHoursEmailReport;
+  customHours: CustomHoursEntry[];
+};
+
 export type DraftGmailReportInput = {
   email: {
     template: string;
     subject: string;
   };
-  formattedData: TaskHoursEmailReport;
+  formattedData: DraftGmailReportFormattedData;
 };
 
 export type DraftGmailReportResponse = {
   status: 'accepted';
   n8nExecutionId: string | null;
+  archiveId: string;
+  project: ProjectRecord;
+  triggeredBy: {
+    id: string;
+    email: string;
+    name: string;
+  };
 };
 
 export function useDraftGmailReportMutation(projectId: string) {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (payload: DraftGmailReportInput) =>
       apiFetch<DraftGmailReportResponse>(`/api/projects/${projectId}/task-hours/draft-gmail`, {
         method: 'POST',
         body: JSON.stringify(payload),
       }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.taskHoursReports.all });
+    },
   });
 }
 

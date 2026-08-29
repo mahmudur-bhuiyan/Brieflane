@@ -3,7 +3,7 @@ import { IconFolder, IconUsers } from '../../../components/common/icons';
 export const quickLinks = [
   {
     title: 'Projects',
-    description: 'Sync from ActiveCollab and manage client details.',
+    description: 'Manage client details and task-hour reports.',
     icon: IconFolder,
     status: 'Available now',
     to: '/projects',

@@ -4,6 +4,7 @@ import { APP_NAME } from '../../constants';
 import { useAuth } from '../../context/AuthContext';
 import {
   IconFolder,
+  IconFileText,
   IconLayoutDashboard,
   IconLogOut,
   IconMenu,
@@ -36,6 +37,7 @@ const navItems: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: <IconLayoutDashboard />, end: true },
   { to: '/users', label: 'Users', icon: <IconUsers />, adminOnly: true },
   { to: '/projects', label: 'Projects', icon: <IconFolder /> },
+  { to: '/reports', label: 'Report archive', icon: <IconFileText /> },
   { to: '/profile', label: 'Profile', icon: <IconUser /> },
   { to: '/settings', label: 'Settings', icon: <IconSettings />, adminOnly: true },
 ];

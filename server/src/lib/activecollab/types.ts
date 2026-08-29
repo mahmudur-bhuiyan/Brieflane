@@ -31,5 +31,11 @@ export class ActiveCollabError extends Error {
 }
 
 export function isActiveCollabError(error: unknown): error is ActiveCollabError {
-  return error instanceof ActiveCollabError;
+  return (
+    error instanceof ActiveCollabError ||
+    (error instanceof Error &&
+      error.name === 'ActiveCollabError' &&
+      'code' in error &&
+      typeof (error as ActiveCollabError).code === 'string')
+  );
 }

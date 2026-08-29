@@ -5,6 +5,7 @@ import { authRouter } from './routes/auth.js';
 import { usersRouter } from './routes/users.js';
 import { projectsRouter } from './routes/projects.js';
 import { reportRunsRouter } from './routes/report-runs.js';
+import { taskHoursReportsRouter } from './routes/task-hours-reports.js';
 import { getDashboardReportStats } from './lib/dashboard.js';
 import { authMiddleware } from './middleware/auth.js';
 import { requireRoles } from './middleware/requireRoles.js';
@@ -65,6 +66,7 @@ export function createApp() {
   app.use('/api/users', usersRouter);
   app.use('/api/projects', projectsRouter);
   app.use('/api/report-runs', reportRunsRouter);
+  app.use('/api/task-hours-reports', taskHoursReportsRouter);
 
   return app;
 }

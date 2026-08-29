@@ -1,7 +1,5 @@
 import { useEffect, useState, type SubmitEvent } from 'react';
-import { Button } from '../../../components/ui/Button';
-import { Card } from '../../../components/ui/Card';
-import { Input } from '../../../components/ui/Input';
+import { IconLink } from '../../../components/common/icons';
 import { useUpdateIntegrationSettingsMutation } from '../../../lib/queries/app-settings';
 import { getApiErrorMessage } from '../../../lib/queries/auth';
 import { toast } from '../../../lib/toast';
@@ -10,6 +8,7 @@ import {
   isActiveCollabSettingsDirty,
   validateActiveCollabSettings,
 } from '../utils/appSettingsForm';
+import { IntegrationSettingsCard } from './IntegrationSettingsCard';
 
 export function ActiveCollabSettingsCard({ saved }: { saved: IntegrationSettings }) {
   const updateSettings = useUpdateIntegrationSettingsMutation();
@@ -23,6 +22,7 @@ export function ActiveCollabSettingsCard({ saved }: { saved: IntegrationSettings
   const submitting = updateSettings.isPending;
   const dirty = isActiveCollabSettingsDirty(activecollabBaseUrl, saved);
   const canSave = dirty && !submitting;
+  const configured = Boolean(saved.activecollabBaseUrl.trim());
 
   const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -49,36 +49,27 @@ export function ActiveCollabSettingsCard({ saved }: { saved: IntegrationSettings
   };
 
   return (
-    <Card>
-      <form className="space-y-5" onSubmit={handleSubmit}>
-        <div>
-          <h3 className="text-base font-semibold text-heading">ActiveCollab</h3>
-          <p className="mt-1 text-sm text-muted">
-            Base URL for project sync, search, and task-hour requests.
-          </p>
-        </div>
-
-        <Input
-          label="Base URL"
-          type="url"
-          required
-          placeholder="https://yourcompany.activecollab.com/api/v1"
-          value={activecollabBaseUrl}
-          onChange={(event) => setActivecollabBaseUrl(event.target.value)}
-        />
-
-        {error && (
-          <p className="text-sm text-red-500" role="alert">
-            {error}
-          </p>
-        )}
-
-        <div className="flex justify-end">
-          <Button type="submit" disabled={!canSave}>
-            {submitting ? 'Saving…' : 'Save ActiveCollab'}
-          </Button>
-        </div>
-      </form>
-    </Card>
+    <IntegrationSettingsCard
+      accent="emerald"
+      icon={<IconLink />}
+      title="ActiveCollab Service URL"
+      description="Configure the ActiveCollab API base URL used for project search and task-hour requests."
+      fieldLabel="Service URL"
+      fieldValue={activecollabBaseUrl}
+      fieldPlaceholder="https://yourcompany.activecollab.com/api/v1"
+      fieldRequired
+      helperText="Enter the full ActiveCollab API base URL. This endpoint is used when searching projects and loading task hours."
+      saveLabel="Save URL"
+      savingLabel="Saving…"
+      configured={configured}
+      configuredSummary="Service Configured"
+      configuredDetailLabel="Requests will be sent to:"
+      configuredValue={saved.activecollabBaseUrl}
+      canSave={canSave}
+      submitting={submitting}
+      error={error}
+      onFieldChange={setActivecollabBaseUrl}
+      onSubmit={handleSubmit}
+    />
   );
 }

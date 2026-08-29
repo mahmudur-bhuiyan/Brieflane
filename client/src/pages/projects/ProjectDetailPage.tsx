@@ -3,7 +3,6 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { toast } from '../../lib/toast';
 import { AppLayout } from '../../components/layout/AppLayout';
 import {
-  IconFileText,
   IconFolder,
   IconHash,
   IconMail,
@@ -12,7 +11,7 @@ import {
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
-import { Input, Textarea } from '../../components/ui/Input';
+import { Input } from '../../components/ui/Input';
 import { PageHeader } from '../../components/ui/PageHeader';
 import {
   getApiErrorMessage,
@@ -21,7 +20,7 @@ import {
 } from '../../lib/queries/projects';
 import type { UpdateProjectInput } from '../../types/project';
 import { PageBackLink } from './components/PageBackLink';
-import { parseMetadata, parseRecipients, projectToForm } from './utils/projectDetail';
+import { projectToForm, validateProjectForm } from './utils/projectDetail';
 import type { ProjectFormState } from './types/projectDetail';
 
 function ProjectMetaField({
@@ -83,23 +82,17 @@ export function ProjectDetailPage() {
 
     setError(null);
 
+    const validation = validateProjectForm(form);
+    if (!validation.ok) {
+      setError(validation.error);
+      return;
+    }
+
     try {
-      let customMetadata: Record<string, unknown>;
-
-      try {
-        customMetadata = parseMetadata(form.customMetadata);
-      } catch {
-        setError('Custom metadata must be valid JSON');
-        return;
-      }
-
       const payload: UpdateProjectInput = {
-        name: form.name.trim(),
+        name: validation.name,
         clientName: form.clientName.trim() || null,
         clientEmail: form.clientEmail.trim() || null,
-        reportRecipients: parseRecipients(form.reportRecipients),
-        customMetadata,
-        status: form.status,
       };
 
       await updateProject.mutateAsync(payload);
@@ -163,7 +156,7 @@ export function ProjectDetailPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 p-5 sm:grid-cols-3 sm:p-6">
+        <div className="grid gap-4 p-5 sm:grid-cols-2 sm:p-6">
           <ProjectMetaField
             icon={<IconHash width={16} height={16} />}
             label="ActiveCollab ID"
@@ -174,15 +167,6 @@ export function ProjectDetailPage() {
             label="Client email"
             value={project.clientEmail || 'Not set'}
             hint={project.clientEmail ? 'Required for reports' : 'Add before generating reports'}
-          />
-          <ProjectMetaField
-            icon={<IconFolder width={16} height={16} />}
-            label="Last synced"
-            value={
-              project.lastSyncedAt
-                ? new Date(project.lastSyncedAt).toLocaleString()
-                : 'Never synced'
-            }
           />
         </div>
       </Card>
@@ -234,41 +218,6 @@ export function ProjectDetailPage() {
               }
               placeholder="client@company.com"
             />
-          </div>
-
-          <div className="rounded-xl border border-subtle bg-subtle p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-              Report delivery
-            </p>
-            <div className="mt-4">
-              <Input
-                label="Additional recipients"
-                icon={<IconMail width={16} height={16} />}
-                value={form.reportRecipients}
-                onChange={(e) =>
-                  setForm((prev) => prev && { ...prev, reportRecipients: e.target.value })
-                }
-                placeholder="cc@company.com, billing@company.com"
-              />
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-subtle bg-subtle p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-              Advanced
-            </p>
-            <div className="mt-4">
-              <Textarea
-                label="Custom metadata (JSON)"
-                rows={5}
-                icon={<IconFileText width={16} height={16} />}
-                value={form.customMetadata}
-                onChange={(e) =>
-                  setForm((prev) => prev && { ...prev, customMetadata: e.target.value })
-                }
-                className="font-mono"
-              />
-            </div>
           </div>
 
           <div className="flex flex-col-reverse gap-3 border-t border-subtle pt-5 sm:flex-row sm:justify-end">

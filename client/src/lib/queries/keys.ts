@@ -24,6 +24,12 @@ export const queryKeys = {
     list: (params: { projectId?: string; status?: string; limit?: number }) =>
       ['reportRuns', 'list', params] as const,
   },
+  taskHoursReports: {
+    all: ['taskHoursReports'] as const,
+    list: (params: { projectId?: string; limit?: number }) =>
+      ['taskHoursReports', 'list', params] as const,
+    detail: (id: string) => ['taskHoursReports', 'detail', id] as const,
+  },
   settings: {
     integration: ['settings', 'integration'] as const,
   },

@@ -46,6 +46,14 @@ export async function assignProjectToUser(userId: string, projectId: string): Pr
   });
 }
 
+export async function unassignProjectFromUser(userId: string, projectId: string): Promise<boolean> {
+  const result = await prisma.projectAssignment.deleteMany({
+    where: { userId, projectId },
+  });
+
+  return result.count > 0;
+}
+
 export async function linkExistingProjectToUser(
   user: AuthUser,
   projectId: string,

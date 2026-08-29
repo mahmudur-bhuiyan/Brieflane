@@ -45,12 +45,6 @@ export function GenerateReportModal({
           <dt className="text-muted">Primary recipient</dt>
           <dd className="font-medium text-heading">{project.clientEmail}</dd>
         </div>
-        {project.reportRecipients.length > 0 && (
-          <div>
-            <dt className="text-muted">Additional recipients</dt>
-            <dd className="text-heading">{project.reportRecipients.join(', ')}</dd>
-          </div>
-        )}
       </dl>
 
       {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
