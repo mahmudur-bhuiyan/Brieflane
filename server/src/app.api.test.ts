@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import { hashPassword, signToken, toAuthUser } from './lib/auth.js';
 import { encryptSecret } from './lib/credentials-crypto.js';
-import { createApp } from './app.js';
+import { createApp } from './create-app.js';
 import { N8nError } from './lib/n8n/types.js';
 import {
   fetchAcProjectById,
@@ -172,6 +172,13 @@ describe('API integration', () => {
   async function bearerToken(record: TestUserRecord) {
     return signToken(toAuthUser(record));
   }
+
+  it('returns root status text', async () => {
+    const response = await request(app).get('/');
+
+    expect(response.status).toBe(200);
+    expect(response.text).toBe('Brieflane server is running');
+  });
 
   it('returns health status', async () => {
     const response = await request(app).get('/api/health');

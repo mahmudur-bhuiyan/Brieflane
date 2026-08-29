@@ -1,5 +1,5 @@
 import './env.js';
-import { createApp } from './app.js';
+import { createApp } from './create-app.js';
 import { APP_NAME } from './constants.js';
 import { bootstrapSuperAdmin } from './services/bootstrap-admin.js';
 
